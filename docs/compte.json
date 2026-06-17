@@ -1,0 +1,529 @@
+{
+  "referentiel": "SYSCOHADA (OHADA révisé)",
+  "pays": "Côte d’Ivoire",
+  "note": "Plan comptable de référence (liste des comptes principaux par classe). Sert de source au seeder.",
+  "classes": [
+    {
+      "classe": "1",
+      "libelle": "Comptes de ressources durables",
+      "comptes": [
+        {
+          "compte": "101",
+          "libelle": "Capital social"
+        },
+        {
+          "compte": "102",
+          "libelle": "Capital par dotation"
+        },
+        {
+          "compte": "103",
+          "libelle": "Capital personnel"
+        },
+        {
+          "compte": "104",
+          "libelle": "Compte de l'exploitant"
+        },
+        {
+          "compte": "105",
+          "libelle": "Primes liées aux capitaux propres"
+        },
+        {
+          "compte": "106",
+          "libelle": "Ecarts de réévaluation"
+        },
+        {
+          "compte": "109",
+          "libelle": "Apporteurs, capital souscrit, non appelé"
+        },
+        {
+          "compte": "11",
+          "libelle": "Réserves"
+        },
+        {
+          "compte": "12",
+          "libelle": "Report à nouveau"
+        },
+        {
+          "compte": "13",
+          "libelle": "Résultat net de l'exercice"
+        },
+        {
+          "compte": "14",
+          "libelle": "Subventions d'investissement"
+        },
+        {
+          "compte": "15",
+          "libelle": "Provisions réglementées et fonds assimilés"
+        },
+        {
+          "compte": "16",
+          "libelle": "Emprunts et dettes assimilées"
+        },
+        {
+          "compte": "17",
+          "libelle": "Dettes de location acquisition"
+        },
+        {
+          "compte": "18",
+          "libelle": "Dettes liées à des participations et comptes de liaison des établissements et sociétés en participation"
+        },
+        {
+          "compte": "19",
+          "libelle": "Provisions pour risques et charges"
+        }
+      ]
+    },
+    {
+      "classe": "2",
+      "libelle": "Comptes d'actif immobilisé",
+      "comptes": [
+        {
+          "compte": "21",
+          "libelle": "Immobilisations incorporelles"
+        },
+        {
+          "compte": "22",
+          "libelle": "Terrains"
+        },
+        {
+          "compte": "23",
+          "libelle": "Bâtiments, installations techniques et agencements"
+        },
+        {
+          "compte": "24",
+          "libelle": "Matériel, Mobilier et Actifs biologiques"
+        },
+        {
+          "compte": "25",
+          "libelle": "Avances et acomptes versés sur immobilisations"
+        },
+        {
+          "compte": "26",
+          "libelle": "Titres de participation"
+        },
+        {
+          "compte": "27",
+          "libelle": "Autres immobilisations financières"
+        },
+        {
+          "compte": "28",
+          "libelle": "Amortissements"
+        },
+        {
+          "compte": "29",
+          "libelle": "Dépréciations"
+        }
+      ]
+    },
+    {
+      "classe": "3",
+      "libelle": "Comptes de stocks",
+      "comptes": [
+        {
+          "compte": "31",
+          "libelle": "Marchandises"
+        },
+        {
+          "compte": "32",
+          "libelle": "Matières premières et fournitures liées"
+        },
+        {
+          "compte": "33",
+          "libelle": "Autres approvisionnements"
+        },
+        {
+          "compte": "34",
+          "libelle": "Produits en cours"
+        },
+        {
+          "compte": "35",
+          "libelle": "Services en cours"
+        },
+        {
+          "compte": "36",
+          "libelle": "Produits finis"
+        },
+        {
+          "compte": "37",
+          "libelle": "Produits intermédiaires et résiduels"
+        },
+        {
+          "compte": "38",
+          "libelle": "Stocks en cours de route, en consignation ou en dépôt"
+        },
+        {
+          "compte": "39",
+          "libelle": "Dépréciations des stocks et encours de production"
+        }
+      ]
+    },
+    {
+      "classe": "4",
+      "libelle": "Comptes de tiers",
+      "comptes": [
+        {
+          "compte": "40",
+          "libelle": "Fournisseurs et comptes rattachés"
+        },
+        {
+          "compte": "4011",
+          "libelle": "Fournisseurs"
+        },
+        {
+          "compte": "41",
+          "libelle": "Clients et comptes rattachés"
+        },
+        {
+          "compte": "4111",
+          "libelle": "Clients"
+        },
+        {
+          "compte": "42",
+          "libelle": "Personnel"
+        },
+        {
+          "compte": "43",
+          "libelle": "Organismes sociaux"
+        },
+        {
+          "compte": "44",
+          "libelle": "Etat et Collectivités publiques"
+        },
+        {
+          "compte": "45",
+          "libelle": "Organismes internationaux"
+        },
+        {
+          "compte": "46",
+          "libelle": "Apporteurs, Associés et Groupe"
+        },
+        {
+          "compte": "47",
+          "libelle": "Débiteurs et créditeurs divers"
+        },
+        {
+          "compte": "48",
+          "libelle": "Créances et dettes hors activités ordinaires"
+        },
+        {
+          "compte": "49",
+          "libelle": "Dépréciations et provisions pour risques à court terme (Tiers)"
+        }
+      ]
+    },
+    {
+      "classe": "5",
+      "libelle": "Comptes de trésorerie",
+      "comptes": [
+        {
+          "compte": "50",
+          "libelle": "Titres de placement"
+        },
+        {
+          "compte": "51",
+          "libelle": "Valeurs à encaisser"
+        },
+        {
+          "compte": "52",
+          "libelle": "Banques"
+        },
+        {
+          "compte": "53",
+          "libelle": "Etablissements financiers et assimilés"
+        },
+        {
+          "compte": "54",
+          "libelle": "Instruments de trésorerie"
+        },
+        {
+          "compte": "55",
+          "libelle": "Instruments de monnaie électronique"
+        },
+        {
+          "compte": "56",
+          "libelle": "Banques, crédits de trésorerie et d'escompte"
+        },
+        {
+          "compte": "57",
+          "libelle": "Caisse"
+        },
+        {
+          "compte": "58",
+          "libelle": "Régies d'avances, accréditifs et virements internes"
+        },
+        {
+          "compte": "59",
+          "libelle": "Dépréciations et provisions pour risques à court terme (Trésorerie)"
+        }
+      ]
+    },
+    {
+      "classe": "6",
+      "libelle": "Comptes de charges des activités ordinaires",
+      "comptes": [
+        {
+          "compte": "60",
+          "libelle": "(sauf 603) Achats"
+        },
+        {
+          "compte": "603",
+          "libelle": "Variations des stocks de biens achetés"
+        },
+        {
+          "compte": "61",
+          "libelle": "Transports"
+        },
+        {
+          "compte": "62",
+          "libelle": "Services extérieurs"
+        },
+        {
+          "compte": "63",
+          "libelle": "Autres services extérieurs"
+        },
+        {
+          "compte": "64",
+          "libelle": "Impôts et taxes"
+        },
+        {
+          "compte": "65",
+          "libelle": "Autres charges (sauf 659)"
+        },
+        {
+          "compte": "659",
+          "libelle": "Charges pour dépréciations et provisions pour risques a court"
+        },
+        {
+          "compte": "66",
+          "libelle": "Charges de personnel"
+        },
+        {
+          "compte": "67",
+          "libelle": "Frais financiers et charges assimilées"
+        },
+        {
+          "compte": "68",
+          "libelle": "Dotations aux amortissements"
+        },
+        {
+          "compte": "69",
+          "libelle": "Dotations aux provisions et aux dépréciations"
+        }
+      ]
+    },
+    {
+      "classe": "7",
+      "libelle": "Comptes de produits des activités ordinaires",
+      "comptes": [
+        {
+          "compte": "70",
+          "libelle": "Ventes"
+        },
+        {
+          "compte": "71",
+          "libelle": "Subventions d'exploitation"
+        },
+        {
+          "compte": "72",
+          "libelle": "Production immobilisée"
+        },
+        {
+          "compte": "73",
+          "libelle": "Variations des stocks de biens et services produits"
+        },
+        {
+          "compte": "75",
+          "libelle": "Autres produits (sauf compte 759)"
+        },
+        {
+          "compte": "759",
+          "libelle": "Reprises de charges pour dépréciations et provisions pour risques à court terme d'exploitation"
+        },
+        {
+          "compte": "77",
+          "libelle": "Revenus financiers et produits assimilés"
+        },
+        {
+          "compte": "78",
+          "libelle": "Transferts de charges"
+        },
+        {
+          "compte": "79",
+          "libelle": "Reprises de provisions, dépréciations et autres"
+        }
+      ]
+    },
+    {
+      "classe": "8",
+      "libelle": "Comptes des autres charges et produits (HAO)",
+      "comptes": [
+        {
+          "compte": "81",
+          "libelle": "Valeurs comptables des cessions d'immobilisations"
+        },
+        {
+          "compte": "82",
+          "libelle": "Produits des cessions d'immobilisations"
+        },
+        {
+          "compte": "83",
+          "libelle": "Charges hors activités ordinaires"
+        },
+        {
+          "compte": "84",
+          "libelle": "Produits hors activités ordinaires"
+        },
+        {
+          "compte": "85",
+          "libelle": "Dotations hors activités ordinaires"
+        },
+        {
+          "compte": "86",
+          "libelle": "Reprises hors activités ordinaires"
+        },
+        {
+          "compte": "87",
+          "libelle": "Participation des travailleurs"
+        },
+        {
+          "compte": "88",
+          "libelle": "Subventions d'équilibre"
+        },
+        {
+          "compte": "89",
+          "libelle": "Impôts sur le résultat"
+        }
+      ]
+    },
+    {
+      "classe": "9",
+      "libelle": "Comptes des engagements hors bilan et comptabilité analytique de gestion",
+      "comptes": [
+        {
+          "compte": "9011",
+          "libelle": "Crédits confirmés obtenus"
+        },
+        {
+          "compte": "9012",
+          "libelle": "Emprunts restant à encaisser"
+        },
+        {
+          "compte": "9013",
+          "libelle": "Facilités de financement renouvelables"
+        },
+        {
+          "compte": "9014",
+          "libelle": "Facilités d'émission"
+        },
+        {
+          "compte": "9018",
+          "libelle": "Autres engagements de financement obtenus"
+        },
+        {
+          "compte": "9021",
+          "libelle": "Avals obtenus"
+        },
+        {
+          "compte": "9022",
+          "libelle": "Cautions, garanties obtenues"
+        },
+        {
+          "compte": "9023",
+          "libelle": "Hypothèques obtenues"
+        },
+        {
+          "compte": "9024",
+          "libelle": "Effets endossés par des tiers"
+        },
+        {
+          "compte": "9028",
+          "libelle": "Autres garanties obtenues"
+        },
+        {
+          "compte": "9031",
+          "libelle": "Achats de marchandises à terme"
+        },
+        {
+          "compte": "9032",
+          "libelle": "Achats à terme de devises"
+        },
+        {
+          "compte": "9033",
+          "libelle": "Commandes fermes des clients"
+        },
+        {
+          "compte": "9038",
+          "libelle": "Autres engagements réciproques"
+        },
+        {
+          "compte": "9041",
+          "libelle": "Abandons de créances conditionnels"
+        },
+        {
+          "compte": "9043",
+          "libelle": "Ventes avec clause de réserve de propriété"
+        },
+        {
+          "compte": "9048",
+          "libelle": "Divers engagements obtenus"
+        },
+        {
+          "compte": "9051",
+          "libelle": "Crédits accordés non décaissés"
+        },
+        {
+          "compte": "9058",
+          "libelle": "Autres engagements de financement accordés"
+        },
+        {
+          "compte": "9061",
+          "libelle": "Avals accordés"
+        },
+        {
+          "compte": "9062",
+          "libelle": "Cautions, garanties accordées"
+        },
+        {
+          "compte": "9063",
+          "libelle": "Hypothèques accordées"
+        },
+        {
+          "compte": "9064",
+          "libelle": "Effets endossés par l'entité"
+        },
+        {
+          "compte": "9068",
+          "libelle": "Autres garanties accordées"
+        },
+        {
+          "compte": "9071",
+          "libelle": "Ventes de marchandises à terme"
+        },
+        {
+          "compte": "9072",
+          "libelle": "Ventes à terme de devises"
+        },
+        {
+          "compte": "9073",
+          "libelle": "Commandes fermes aux fournisseurs"
+        },
+        {
+          "compte": "9078",
+          "libelle": "Autres engagements réciproques"
+        },
+        {
+          "compte": "9081",
+          "libelle": "Annulations conditionnelles de dettes"
+        },
+        {
+          "compte": "9083",
+          "libelle": "Achats avec clause de réserve de propriété"
+        },
+        {
+          "compte": "9088",
+          "libelle": "Divers engagements accordés"
+        }
+      ]
+    }
+  ]
+}
