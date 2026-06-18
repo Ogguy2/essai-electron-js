@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput } from '../shared/ipc';
 import * as comptes from './services/comptes';
+import * as journaux from './services/journaux';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
@@ -94,4 +95,13 @@ export function registerIpcHandlers(): void {
     wrap<Compte>(() => comptes.update(id, input), 'comptes:update'));
   ipcMain.handle(IPC.comptesDelete, (_e, id: number) =>
     wrap<null>(async () => { await comptes.remove(id); return null; }, 'comptes:delete'));
+
+  ipcMain.handle(IPC.journauxList, (_e, magasinId: number) =>
+    wrap<Journal[]>(() => journaux.list(magasinId), 'journaux:list'));
+  ipcMain.handle(IPC.journauxCreate, (_e, magasinId: number, input: JournalInput) =>
+    wrap<Journal>(() => journaux.create(magasinId, input), 'journaux:create'));
+  ipcMain.handle(IPC.journauxUpdate, (_e, id: number, input: JournalInput) =>
+    wrap<Journal>(() => journaux.update(id, input), 'journaux:update'));
+  ipcMain.handle(IPC.journauxDelete, (_e, id: number) =>
+    wrap<null>(async () => { await journaux.remove(id); return null; }, 'journaux:delete'));
 }
