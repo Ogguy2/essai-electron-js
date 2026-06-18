@@ -22,9 +22,6 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
 import { exerciceInputSchema, type ExerciceFormValues } from '@/shared/schemas';
 import type { AuthUser, Exercice, Magasin } from '@/shared/ipc';
 
@@ -166,63 +163,64 @@ export function ExercicesModule({ user, magasin }: Props): React.JSX.Element {
       )}
 
       {!loading && rows.length > 0 && (
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Libellé</TableHead>
-                <TableHead>Période</TableHead>
-                <TableHead>Statut</TableHead>
-                {isAdmin && <TableHead className="w-12 text-right">Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((ex) => (
-                <TableRow key={ex.id}>
-                  <TableCell className="font-semibold">{ex.libelle}</TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {fmtDate(ex.date_debut)} → {fmtDate(ex.date_fin)}
-                  </TableCell>
-                  <TableCell>
-                    {ex.statut === 'ouvert' ? (
-                      <Badge variant="default">Ouvert</Badge>
-                    ) : (
-                      <Badge variant="secondary">Clôturé</Badge>
-                    )}
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                            <MoreHorizontal />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEdit(ex)}>
-                            <Pencil /> Modifier
-                          </DropdownMenuItem>
-                          {ex.statut === 'ouvert' ? (
-                            <DropdownMenuItem
-                              onClick={() => setConfirm({ type: 'close', exercice: ex })}
-                            >
-                              <LockKeyhole /> Clôturer
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() => setConfirm({ type: 'reopen', exercice: ex })}
-                            >
-                              <LockKeyholeOpen /> Rouvrir
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+        <div className="flex flex-col gap-3">
+          {[...rows].sort((a, b) => b.libelle.localeCompare(a.libelle)).map((ex) => (
+            <div
+              key={ex.id}
+              className="flex items-center gap-4 rounded-lg border border-border bg-card px-5 py-4"
+            >
+              {/* Annee / libelle */}
+              <div className="text-[28px] font-extrabold tabular-nums text-primary leading-none w-24 shrink-0">
+                {ex.libelle}
+              </div>
+
+              {/* Info centrale */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  {ex.statut === 'ouvert' ? (
+                    <Badge variant="default">Ouvert</Badge>
+                  ) : (
+                    <Badge variant="secondary">Cloture</Badge>
                   )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  {ex.statut === 'ouvert' && (
+                    <Badge variant="outline" className="text-primary border-primary/40">Saisie active</Badge>
+                  )}
+                </div>
+                <div className="text-[13px] font-semibold text-muted-foreground">
+                  Du {fmtDate(ex.date_debut)} au {fmtDate(ex.date_fin)}
+                </div>
+              </div>
+
+              {/* Actions */}
+              {isAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                      <MoreHorizontal />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEdit(ex)}>
+                      <Pencil /> Modifier
+                    </DropdownMenuItem>
+                    {ex.statut === 'ouvert' ? (
+                      <DropdownMenuItem
+                        onClick={() => setConfirm({ type: 'close', exercice: ex })}
+                      >
+                        <LockKeyhole /> Cloturer
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem
+                        onClick={() => setConfirm({ type: 'reopen', exercice: ex })}
+                      >
+                        <LockKeyholeOpen /> Rouvrir
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
