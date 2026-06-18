@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -182,9 +182,9 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[940px]" showCloseButton={false}>
-        {/* En-tête modal */}
-        <DialogHeader className="border-b border-border pb-[18px] -mt-1">
+      <DialogContent className="sm:max-w-[940px] p-0 gap-0 flex flex-col max-h-[88vh]" showCloseButton={false}>
+        {/* En-tête fixe */}
+        <DialogHeader className="flex-none border-b border-border px-6 pt-5 pb-[18px]">
           <div className="flex items-start gap-[13px]">
             <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Pen size={18} />
@@ -194,7 +194,7 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                 {editing ? 'Modification' : 'Saisie'} · partie double
               </p>
               <DialogTitle className="text-[17px] font-bold leading-tight">
-                {editing ? 'Modifier l’écriture' : 'Nouvelle écriture'}
+                {editing ? "Modifier l'écriture" : 'Nouvelle écriture'}
               </DialogTitle>
               <p className="mt-0.5 text-[13px] font-medium text-muted-foreground leading-snug">
                 {magasin.libelle}{exercice ? ` · Exercice ${exercice.libelle}` : ''}
@@ -212,253 +212,256 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
           </div>
         </DialogHeader>
 
-        {/* Erreur serveur */}
-        {serverError && (
-          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2.5 text-sm font-semibold -mb-1">
-            <AlertTriangle size={15} className="flex-none" />
-            {serverError}
-          </div>
-        )}
-
-        <form
-          id="ecriture-form"
-          onSubmit={handleSubmit((v) => void submit(v, false))}
-          className="flex flex-col gap-4 pt-1 pb-2"
-        >
-          {/* 3 champs en-tête */}
-          <div className="flex flex-wrap gap-3">
-            <div className="flex flex-col gap-1.5" style={{ width: 200 }}>
-              <Label>Journal</Label>
-              <Controller
-                name="journal"
-                control={control}
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger aria-invalid={errors.journal ? 'true' : undefined}>
-                      <SelectValue placeholder="Choisir…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {journauxSaisie.map((j) => (
-                        <SelectItem key={j.code} value={j.code}>
-                          {j.code} — {j.libelle}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {errors.journal && <p className="text-xs text-destructive">{errors.journal.message}</p>}
-            </div>
-
-            <div className="flex flex-col gap-1.5" style={{ width: 170 }}>
-              <Label>Date d&apos;écriture</Label>
-              <Input
-                type="date"
-                className={!exerciceOk && dateWatch ? 'border-amber-500 focus-visible:ring-amber-500' : ''}
-                aria-invalid={errors.date_ecriture ? 'true' : undefined}
-                {...register('date_ecriture')}
-              />
-              {errors.date_ecriture && <p className="text-xs text-destructive">{errors.date_ecriture.message}</p>}
-            </div>
-
-            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-              <Label>Libellé de la pièce</Label>
-              <Input
-                placeholder="ex. Facture FV-1062 — Boutique Adjamé"
-                aria-invalid={errors.libelle ? 'true' : undefined}
-                {...register('libelle')}
-              />
-              {errors.libelle && <p className="text-xs text-destructive">{errors.libelle.message}</p>}
-            </div>
-          </div>
-
-          {/* Avertissement date hors exercice */}
-          {!exerciceOk && dateWatch && (
-            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 text-sm font-bold -mt-1">
+        {/* Zone scrollable : erreur serveur + formulaire */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {/* Erreur serveur */}
+          {serverError && (
+            <div className="flex items-center gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2.5 text-sm font-semibold mb-3">
               <AlertTriangle size={15} className="flex-none" />
-              Aucun exercice ouvert ne couvre cette date — la validation sera refusée.
+              {serverError}
             </div>
           )}
 
-          {/* Lignes en grille */}
-          <div className="flex flex-col gap-2">
-            {/* En-tête grille */}
-            <div className="grid gap-2 px-0.5" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Compte</div>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Tiers</div>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Libellé ligne</div>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Débit</div>
-              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Crédit</div>
-              <div></div>
+          <form
+            id="ecriture-form"
+            onSubmit={handleSubmit((v) => void submit(v, false))}
+            className="flex flex-col gap-4 pt-1 pb-2"
+          >
+            {/* 3 champs en-tête */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex flex-col gap-1.5" style={{ width: 200 }}>
+                <Label>Journal</Label>
+                <Controller
+                  name="journal"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger aria-invalid={errors.journal ? 'true' : undefined}>
+                        <SelectValue placeholder="Choisir…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {journauxSaisie.map((j) => (
+                          <SelectItem key={j.code} value={j.code}>
+                            {j.code} — {j.libelle}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.journal && <p className="text-xs text-destructive">{errors.journal.message}</p>}
+              </div>
+
+              <div className="flex flex-col gap-1.5" style={{ width: 170 }}>
+                <Label>Date d&apos;écriture</Label>
+                <Input
+                  type="date"
+                  className={!exerciceOk && dateWatch ? 'border-amber-500 focus-visible:ring-amber-500' : ''}
+                  aria-invalid={errors.date_ecriture ? 'true' : undefined}
+                  {...register('date_ecriture')}
+                />
+                {errors.date_ecriture && <p className="text-xs text-destructive">{errors.date_ecriture.message}</p>}
+              </div>
+
+              <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                <Label>Libellé de la pièce</Label>
+                <Input
+                  placeholder="ex. Facture FV-1062 — Boutique Adjamé"
+                  aria-invalid={errors.libelle ? 'true' : undefined}
+                  {...register('libelle')}
+                />
+                {errors.libelle && <p className="text-xs text-destructive">{errors.libelle.message}</p>}
+              </div>
             </div>
 
-            {/* Lignes */}
-            {fields.map((field, i) => {
-              const compteVal = lignesWatch[i]?.compte ?? '';
-              const estCollectif = compteVal ? estAncreCollectif(compteVal) : false;
-              const compteLibelle = compteVal
-                ? (comptes.find((c) => c.numero === compteVal)?.libelle ?? '')
-                : '';
-
-              return (
-                <div key={field.id} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
-                  {/* Compte */}
-                  <Controller
-                    name={`lignes.${i}.compte`}
-                    control={control}
-                    render={({ field: cf }) => (
-                      <Combobox<string>
-                        value={cf.value || null}
-                        onValueChange={(v) => {
-                          cf.onChange(v ?? '');
-                          if (!v || !estAncreCollectif(v)) {
-                            setValue(`lignes.${i}.tiers`, null);
-                          }
-                        }}
-                      >
-                        <ComboboxInput
-                          className="h-[38px] text-[13px]"
-                          placeholder={compteVal ? `${compteVal}${compteLibelle ? ' — ' + compteLibelle : ''}` : 'Compte…'}
-                          showClear={!!cf.value}
-                        />
-                        <ComboboxContent>
-                          <ComboboxList>
-                            <ComboboxEmpty>Aucun compte.</ComboboxEmpty>
-                            {comptes.map((c) => (
-                              <ComboboxItem key={c.numero} value={c.numero}>
-                                <span className="font-mono text-primary mr-1">{c.numero}</span>
-                                <span>{c.libelle}</span>
-                              </ComboboxItem>
-                            ))}
-                          </ComboboxList>
-                        </ComboboxContent>
-                      </Combobox>
-                    )}
-                  />
-
-                  {/* Tiers */}
-                  <Controller
-                    name={`lignes.${i}.tiers`}
-                    control={control}
-                    render={({ field: tf }) => (
-                      <Select
-                        value={tf.value ?? ''}
-                        onValueChange={(v) => tf.onChange(v || null)}
-                        disabled={!estCollectif}
-                      >
-                        <SelectTrigger
-                          className="h-[38px] text-[13px]"
-                          style={{ opacity: estCollectif ? 1 : 0.5 }}
-                        >
-                          <SelectValue placeholder={estCollectif ? 'Sélectionner…' : '—'} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="">—</SelectItem>
-                          {tiers.map((t) => (
-                            <SelectItem key={t.code} value={t.code}>
-                              {t.code} — {t.raison_sociale}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-
-                  {/* Libellé ligne */}
-                  <Input
-                    className="h-[38px] text-[13px]"
-                    placeholder="Libellé"
-                    {...register(`lignes.${i}.libelle`)}
-                  />
-
-                  {/* Débit */}
-                  <Input
-                    className="h-[38px] text-[13px] text-right"
-                    type="number"
-                    min={0}
-                    placeholder="0"
-                    onDoubleClick={() => {
-                      const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
-                      const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
-                      const ecartOther = otherCredit - otherDebit;
-                      if (ecartOther > 0) {
-                        setValue(`lignes.${i}.debit`, ecartOther);
-                        setValue(`lignes.${i}.credit`, 0);
-                      }
-                    }}
-                    {...register(`lignes.${i}.debit`, {
-                      valueAsNumber: true,
-                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                        const v = Number(e.target.value) || 0;
-                        if (v > 0) setValue(`lignes.${i}.credit`, 0);
-                      },
-                    })}
-                  />
-
-                  {/* Crédit */}
-                  <Input
-                    className="h-[38px] text-[13px] text-right"
-                    type="number"
-                    min={0}
-                    placeholder="0"
-                    onDoubleClick={() => {
-                      const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
-                      const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
-                      const ecartOther = otherDebit - otherCredit;
-                      if (ecartOther > 0) {
-                        setValue(`lignes.${i}.credit`, ecartOther);
-                        setValue(`lignes.${i}.debit`, 0);
-                      }
-                    }}
-                    {...register(`lignes.${i}.credit`, {
-                      valueAsNumber: true,
-                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                        const v = Number(e.target.value) || 0;
-                        if (v > 0) setValue(`lignes.${i}.debit`, 0);
-                      },
-                    })}
-                  />
-
-                  {/* Supprimer */}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    disabled={fields.length <= 2}
-                    onClick={() => remove(i)}
-                    aria-label="Supprimer la ligne"
-                  >
-                    <Trash2 className="size-3.5 text-destructive" />
-                  </Button>
-                </div>
-              );
-            })}
-
-            {errors.lignes && !Array.isArray(errors.lignes) && (
-              <p className="text-xs text-destructive">{(errors.lignes as { message?: string }).message}</p>
+            {/* Avertissement date hors exercice */}
+            {!exerciceOk && dateWatch && (
+              <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 text-sm font-bold -mt-1">
+                <AlertTriangle size={15} className="flex-none" />
+                Aucun exercice ouvert ne couvre cette date — la validation sera refusée.
+              </div>
             )}
 
-            {/* Ajouter une ligne */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="self-start mt-1"
-              onClick={() => append(ligneVide())}
-            >
-              <Plus className="size-4" /> Ajouter une ligne
-            </Button>
+            {/* Lignes en grille */}
+            <div className="flex flex-col gap-2">
+              {/* En-tête grille */}
+              <div className="grid gap-2 px-0.5" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Compte</div>
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Tiers</div>
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Libellé ligne</div>
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Débit</div>
+                <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Crédit</div>
+                <div></div>
+              </div>
 
-            {/* Hint */}
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mt-0.5">
-              <BookOpen size={13} className="flex-none" />
-              Astuce : double-cliquez sur un champ montant pour équilibrer automatiquement la ligne.
-            </p>
-          </div>
-        </form>
+              {/* Lignes */}
+              {fields.map((field, i) => {
+                const compteVal = lignesWatch[i]?.compte ?? '';
+                const estCollectif = compteVal ? estAncreCollectif(compteVal) : false;
+                const compteLibelle = compteVal
+                  ? (comptes.find((c) => c.numero === compteVal)?.libelle ?? '')
+                  : '';
 
-        {/* Pied avec balance */}
-        <div className="border-t border-border pt-4 flex items-center justify-between flex-wrap gap-4">
+                return (
+                  <div key={field.id} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
+                    {/* Compte */}
+                    <Controller
+                      name={`lignes.${i}.compte`}
+                      control={control}
+                      render={({ field: cf }) => (
+                        <Combobox<string>
+                          value={cf.value || null}
+                          onValueChange={(v) => {
+                            cf.onChange(v ?? '');
+                            if (!v || !estAncreCollectif(v)) {
+                              setValue(`lignes.${i}.tiers`, null);
+                            }
+                          }}
+                        >
+                          <ComboboxInput
+                            className="h-[38px] text-[13px]"
+                            placeholder={compteVal ? `${compteVal}${compteLibelle ? ' — ' + compteLibelle : ''}` : 'Compte…'}
+                            showClear={!!cf.value}
+                          />
+                          <ComboboxContent>
+                            <ComboboxList>
+                              <ComboboxEmpty>Aucun compte.</ComboboxEmpty>
+                              {comptes.map((c) => (
+                                <ComboboxItem key={c.numero} value={c.numero}>
+                                  <span className="font-mono text-primary mr-1">{c.numero}</span>
+                                  <span>{c.libelle}</span>
+                                </ComboboxItem>
+                              ))}
+                            </ComboboxList>
+                          </ComboboxContent>
+                        </Combobox>
+                      )}
+                    />
+
+                    {/* Tiers */}
+                    <Controller
+                      name={`lignes.${i}.tiers`}
+                      control={control}
+                      render={({ field: tf }) => (
+                        <Select
+                          value={tf.value ?? ''}
+                          onValueChange={(v) => tf.onChange(v || null)}
+                          disabled={!estCollectif}
+                        >
+                          <SelectTrigger
+                            className="h-[38px] text-[13px]"
+                            style={{ opacity: estCollectif ? 1 : 0.5 }}
+                          >
+                            <SelectValue placeholder={estCollectif ? 'Sélectionner…' : '—'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">—</SelectItem>
+                            {tiers.map((t) => (
+                              <SelectItem key={t.code} value={t.code}>
+                                {t.code} — {t.raison_sociale}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+
+                    {/* Libellé ligne */}
+                    <Input
+                      className="h-[38px] text-[13px]"
+                      placeholder="Libellé"
+                      {...register(`lignes.${i}.libelle`)}
+                    />
+
+                    {/* Débit */}
+                    <Input
+                      className="h-[38px] text-[13px] text-right"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      onDoubleClick={() => {
+                        const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                        const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                        const ecartOther = otherCredit - otherDebit;
+                        if (ecartOther > 0) {
+                          setValue(`lignes.${i}.debit`, ecartOther);
+                          setValue(`lignes.${i}.credit`, 0);
+                        }
+                      }}
+                      {...register(`lignes.${i}.debit`, {
+                        valueAsNumber: true,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const v = Number(e.target.value) || 0;
+                          if (v > 0) setValue(`lignes.${i}.credit`, 0);
+                        },
+                      })}
+                    />
+
+                    {/* Crédit */}
+                    <Input
+                      className="h-[38px] text-[13px] text-right"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      onDoubleClick={() => {
+                        const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                        const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                        const ecartOther = otherDebit - otherCredit;
+                        if (ecartOther > 0) {
+                          setValue(`lignes.${i}.credit`, ecartOther);
+                          setValue(`lignes.${i}.debit`, 0);
+                        }
+                      }}
+                      {...register(`lignes.${i}.credit`, {
+                        valueAsNumber: true,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                          const v = Number(e.target.value) || 0;
+                          if (v > 0) setValue(`lignes.${i}.debit`, 0);
+                        },
+                      })}
+                    />
+
+                    {/* Supprimer */}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={fields.length <= 2}
+                      onClick={() => remove(i)}
+                      aria-label="Supprimer la ligne"
+                    >
+                      <Trash2 className="size-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                );
+              })}
+
+              {errors.lignes && !Array.isArray(errors.lignes) && (
+                <p className="text-xs text-destructive">{(errors.lignes as { message?: string }).message}</p>
+              )}
+
+              {/* Ajouter une ligne */}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="self-start mt-1"
+                onClick={() => append(ligneVide())}
+              >
+                <Plus className="size-4" /> Ajouter une ligne
+              </Button>
+
+              {/* Hint */}
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mt-0.5">
+                <BookOpen size={13} className="flex-none" />
+                Astuce : double-cliquez sur un champ montant pour équilibrer automatiquement la ligne.
+              </p>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer ancré */}
+        <div className="flex-none border-t border-border px-6 py-4 flex items-center justify-between flex-wrap gap-4">
           {/* Balance à gauche */}
           <div className="flex items-center gap-6">
             <div className="flex flex-col gap-0.5">
@@ -475,11 +478,11 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
             </div>
             {equilibree ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-green-600/15 text-green-700 dark:text-green-400 px-3 py-1.5 text-sm font-extrabold">
-                <CheckCircle size={16} /> Équilibrée
+                <CheckCircle size={16} /> {'Équilibrée'}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 text-destructive px-3 py-1.5 text-sm font-extrabold">
-                <AlertTriangle size={16} /> Déséquilibrée
+                <AlertTriangle size={16} /> {'Déséquilibrée'}
               </span>
             )}
           </div>
@@ -487,7 +490,7 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
           {/* Boutons à droite */}
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="lg" onClick={onClose}>
-              Annuler
+              <X /> Annuler
             </Button>
             <Button
               variant="outline"
@@ -710,9 +713,9 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pending === 'delete' ? 'Supprimer le brouillon ?' :
-               pending === 'validate' ? 'Valider l’écriture ?' :
-               pending === 'reverse' ? 'Extourner l’écriture ?' :
-               'Invalider l’écriture ?'}
+               pending === 'validate' ? "Valider l'écriture ?" :
+               pending === 'reverse' ? "Extourner l'écriture ?" :
+               "Invalider l'écriture ?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {pending ? alertMsg[pending] : ''}
