@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { CardListSkeleton } from '@/components/skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -126,7 +127,7 @@ export function MagasinsModule({ user, onChanged, magasinCourantId }: Props): Re
 
       {/* Grille de cartes */}
       {loading ? (
-        <p className="text-muted-foreground text-sm">Chargement…</p>
+        <CardListSkeleton count={4} className="grid grid-cols-1 gap-4 xl:grid-cols-2" />
       ) : rows.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucun magasin.</p>
       ) : (

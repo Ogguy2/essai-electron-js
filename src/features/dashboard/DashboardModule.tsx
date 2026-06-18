@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { LayoutDashboard, TrendingUp, TrendingDown, Landmark, ShoppingCart, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { KpiGridSkeleton } from '@/components/skeletons';
 import type { Magasin, Resultat, LigneBalance, EcritureListItem, LigneEcheance, CaMensuel } from '@/shared/ipc';
 
 // ---------------------------------------------------------------------------
@@ -290,8 +292,25 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
         )}
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground mb-4">Chargement...</p>}
+      {loading && (
+        <div className="flex flex-col gap-6">
+          <KpiGridSkeleton className="grid grid-cols-2 gap-4 lg:grid-cols-4" />
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="flex flex-col gap-4 lg:col-span-2">
+              <Skeleton className="h-64 w-full rounded-lg" />
+              <Skeleton className="h-56 w-full rounded-lg" />
+            </div>
+            <div className="flex flex-col gap-4">
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-28 w-full rounded-lg" />
+              <Skeleton className="h-40 w-full rounded-lg" />
+            </div>
+          </div>
+        </div>
+      )}
 
+      {!loading && (
+      <>
       {/* 4 KPIs */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Kpi
@@ -453,6 +472,8 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

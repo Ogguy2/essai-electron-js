@@ -6,6 +6,7 @@ import {
   Plus, Save, X, Building2, MoreHorizontal, Pencil, Trash2, Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { CardListSkeleton } from '@/components/skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -123,7 +124,7 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
 
       {/* Grille de cartes */}
       {loading ? (
-        <p className="text-muted-foreground text-sm">Chargement…</p>
+        <CardListSkeleton count={4} className="grid grid-cols-1 gap-4 xl:grid-cols-2" />
       ) : rows.length === 0 ? (
         <p className="text-muted-foreground text-sm">Aucune société.</p>
       ) : (

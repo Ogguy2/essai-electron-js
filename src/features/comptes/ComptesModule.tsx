@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -28,7 +29,26 @@ import {
 } from '@/components/ui/alert-dialog';
 import { compteInputSchema, type CompteFormValues } from '@/shared/schemas';
 import { classeFromNumero } from '@/domain/compte';
-import type { AuthUser, Compte, Magasin } from '@/shared/ipc';
+import type { AuthUser, Compte, LigneBalance, Magasin } from '@/shared/ipc';
+
+/** Formate un montant en FCFA, sans espaces insécables (alignés sur EtatsModule). */
+function fmtFcfa(n: number): string {
+  const raw = n.toLocaleString('fr-FR');
+  return (
+    raw
+      .split('')
+      .filter((c) => c.charCodeAt(0) !== 0x202f && c.charCodeAt(0) !== 0xa0)
+      .join('') + ' FCFA'
+  );
+}
+
+/** Mouvements/solde d'un compte, dérivés de la balance. */
+interface CompteSolde {
+  debit: number;
+  credit: number;
+  /** Signé : > 0 débiteur, < 0 créditeur. */
+  solde: number;
+}
 
 const CLASSES: Record<number, string> = {
   1: 'Ressources durables',
@@ -59,6 +79,7 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
   const isAdmin = user.role === 'Admin';
 
   const [rows, setRows] = useState<Compte[]>([]);
+  const [balance, setBalance] = useState<LigneBalance[]>([]);
   const [loading, setLoading] = useState(false);
   const [q, setQ] = useState('');
   const [classeFilter, setClasseFilter] = useState<string>('all');
@@ -83,26 +104,60 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
   } = form;
 
   async function load() {
-    if (!magasin) { setRows([]); return; }
+    if (!magasin) { setRows([]); setBalance([]); return; }
     setLoading(true);
-    const res = await window.api.comptes.list(magasin.id);
-    if (res.success) setRows(res.data); else toast.error(res.error.message);
+    // Plan comptable + balance (mouvements/soldes) chargés ensemble.
+    const [cRes, bRes] = await Promise.all([
+      window.api.comptes.list(magasin.id),
+      window.api.reporting.balance(magasin.id),
+    ]);
+    if (cRes.success) setRows(cRes.data); else toast.error(cRes.error.message);
+    if (bRes.success) setBalance(bRes.data); else toast.error(bRes.error.message);
     setLoading(false);
   }
 
   // Chargement sur changement de magasin, avec garde anti-race : si l'utilisateur
-  // change de magasin pendant un list() lent, on ignore la réponse périmée.
+  // change de magasin pendant un chargement lent, on ignore la réponse périmée.
   useEffect(() => {
-    if (!magasin) { setRows([]); return; }
+    if (!magasin) { setRows([]); setBalance([]); return; }
     let cancelled = false;
     setLoading(true);
-    void window.api.comptes.list(magasin.id).then((res) => {
+    void Promise.all([
+      window.api.comptes.list(magasin.id),
+      window.api.reporting.balance(magasin.id),
+    ]).then(([cRes, bRes]) => {
       if (cancelled) return;
-      if (res.success) setRows(res.data); else toast.error(res.error.message);
+      const comptes = cRes.success ? cRes.data : [];
+      const bal = bRes.success ? bRes.data : [];
+      if (cRes.success) setRows(comptes); else toast.error(cRes.error.message);
+      if (bRes.success) setBalance(bal); else toast.error(bRes.error.message);
+      // Par défaut, on ferme les classes sans mouvement (débit = crédit = 0).
+      const classesMouvementees = new Set<number>();
+      for (const b of bal) {
+        if (b.debit !== 0 || b.credit !== 0) classesMouvementees.add(b.classe);
+      }
+      const initCollapsed: Record<number, boolean> = {};
+      for (const c of comptes) {
+        if (!classesMouvementees.has(c.classe)) initCollapsed[c.classe] = true;
+      }
+      setCollapsed(initCollapsed);
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [magasin]);
+
+  // Map numéro → mouvements/solde, dérivée de la balance.
+  const soldeByNumero = useMemo(() => {
+    const m = new Map<string, CompteSolde>();
+    for (const b of balance) {
+      m.set(b.numero, {
+        debit: b.debit,
+        credit: b.credit,
+        solde: b.solde_debiteur - b.solde_crediteur,
+      });
+    }
+    return m;
+  }, [balance]);
 
   const filtered = useMemo(
     () =>
@@ -205,109 +260,161 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
       </div>
 
       {/* Barre de recherche + filtre */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="relative min-w-56 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Rechercher un numéro ou un intitulé…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      <div className="mb-4 rounded-lg border border-border bg-card p-3.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-56 flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Rechercher un numéro ou un intitulé…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
+          <Select value={classeFilter} onValueChange={setClasseFilter}>
+            <SelectTrigger className="w-60">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Toutes les classes</SelectItem>
+              {Object.entries(CLASSES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>
+                  Classe {k} — {v}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={classeFilter} onValueChange={setClasseFilter}>
-          <SelectTrigger className="w-60">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les classes</SelectItem>
-            {Object.entries(CLASSES).map(([k, v]) => (
-              <SelectItem key={k} value={k}>
-                Classe {k} — {v}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {loading && (
+        <TableSkeleton columns={['w-20', 'flex-1', 'w-28', 'w-24', 'w-24', 'w-24']} />
+      )}
       {!loading && byClasse.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucun compte.</p>
       )}
 
       {/* Liste groupée par classe */}
       <div className="flex flex-col gap-3">
-        {byClasse.map(([classe, comptes]) => (
-          <div key={classe} className="overflow-hidden rounded-lg border border-border bg-card">
-            <Button
-              variant="ghost"
-              onClick={() => toggleCollapsed(classe)}
-              className="h-auto w-full justify-start gap-2 rounded-none px-4 py-3 text-left font-normal whitespace-normal hover:bg-muted/50"
-            >
-              <ChevronDown
-                className={`size-4 text-muted-foreground transition-transform${collapsed[classe] ? ' -rotate-90' : ''}`}
-              />
-              <span className="font-bold">Classe {classe}</span>
-              <span className="text-sm font-semibold text-muted-foreground">
-                — {CLASSES[classe]}
-              </span>
-              <span className="ml-auto text-xs font-bold text-muted-foreground">
-                {comptes.length} compte{comptes.length !== 1 ? 's' : ''}
-              </span>
-            </Button>
+        {byClasse.map(([classe, comptes]) => {
+          const tot = comptes.reduce(
+            (a, c) => {
+              const s = soldeByNumero.get(c.numero);
+              return { debit: a.debit + (s?.debit ?? 0), credit: a.credit + (s?.credit ?? 0) };
+            },
+            { debit: 0, credit: 0 },
+          );
+          return (
+            <div key={classe} className="overflow-hidden rounded-lg border border-border bg-card">
+              <button
+                type="button"
+                onClick={() => toggleCollapsed(classe)}
+                className="flex w-full cursor-pointer items-center gap-3 bg-secondary px-4 py-3 text-left transition-colors hover:bg-muted"
+              >
+                <ChevronDown
+                  className={`size-[17px] flex-none text-muted-foreground transition-transform${collapsed[classe] ? ' -rotate-90' : ''}`}
+                />
+                <span className="w-5 flex-none text-lg font-bold tabular-nums text-primary">
+                  {classe}
+                </span>
+                <span className="font-extrabold">{CLASSES[classe]}</span>
+                <span className="text-xs font-bold text-muted-foreground">
+                  {comptes.length} compte{comptes.length !== 1 ? 's' : ''}
+                </span>
+                <span className="ml-auto tabular-nums text-[13px] font-semibold">
+                  {fmtFcfa(tot.debit)}
+                </span>
+                <span className="w-32 text-right tabular-nums text-[13px] font-semibold text-muted-foreground">
+                  {fmtFcfa(tot.credit)}
+                </span>
+              </button>
 
-            {!collapsed[classe] && (
-              <table className="w-full border-t border-border text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="w-28 px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Numero</th>
-                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Intitule</th>
-                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Attributs</th>
-                    {isAdmin && <th className="w-12 px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground text-right">Actions</th>}
-                  </tr>
-                </thead>
-                <tbody>
-                  {comptes.map((c) => (
-                    <tr key={c.id} className="border-b border-border last:border-0">
-                      <td className="w-28 px-4 py-2 font-mono font-bold text-primary">
-                        {c.numero}
-                      </td>
-                      <td className="px-4 py-2 font-semibold">{c.libelle}</td>
-                      <td className="px-4 py-2">
-                        <div className="flex gap-1.5">
-                          {c.collectif && <Badge variant="secondary">Collectif</Badge>}
-                          {c.lettrable && <Badge variant="secondary">Lettrable</Badge>}
-                        </div>
-                      </td>
-                      {isAdmin && (
-                        <td className="w-12 px-4 py-2 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                                <MoreHorizontal />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEdit(c)}>
-                                <Pencil /> Modifier
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                variant="destructive"
-                                onClick={() => setToDelete(c)}
-                              >
-                                <Trash2 /> Supprimer
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      )}
+              {!collapsed[classe] && (
+                <table className="w-full border-t border-border text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="w-28 px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Numéro</th>
+                      <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Intitulé</th>
+                      <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Attributs</th>
+                      <th className="px-4 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Mvt débit</th>
+                      <th className="px-4 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Mvt crédit</th>
+                      <th className="px-4 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Solde</th>
+                      {isAdmin && <th className="w-12 px-4 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        ))}
+                  </thead>
+                  <tbody>
+                    {comptes.map((c) => {
+                      const s = soldeByNumero.get(c.numero);
+                      const debit = s?.debit ?? 0;
+                      const credit = s?.credit ?? 0;
+                      const solde = s?.solde ?? 0;
+                      return (
+                        <tr key={c.id} className="border-b border-border last:border-0">
+                          <td className="w-28 px-4 py-2 font-mono font-bold text-primary">
+                            {c.numero}
+                          </td>
+                          <td className="px-4 py-2 font-semibold">{c.libelle}</td>
+                          <td className="px-4 py-2">
+                            <div className="flex gap-1.5">
+                              {c.collectif && <Badge>Collectif</Badge>}
+                              {c.lettrable && (
+                                <Badge variant="outline" className="border-sky-400 text-sky-700 dark:text-sky-400">
+                                  Lettrable
+                                </Badge>
+                              )}
+                              {!c.collectif && !c.lettrable && (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-right tabular-nums">
+                            {debit ? fmtFcfa(debit) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td className="px-4 py-2 text-right tabular-nums">
+                            {credit ? fmtFcfa(credit) : <span className="text-muted-foreground">—</span>}
+                          </td>
+                          <td
+                            className={`px-4 py-2 text-right tabular-nums font-medium ${
+                              solde > 0
+                                ? 'text-green-700 dark:text-green-400'
+                                : solde < 0
+                                  ? 'text-destructive'
+                                  : 'text-muted-foreground'
+                            }`}
+                          >
+                            {solde ? fmtFcfa(solde) : '—'}
+                          </td>
+                          {isAdmin && (
+                            <td className="w-12 px-4 py-2 text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                                    <MoreHorizontal />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => openEdit(c)}>
+                                    <Pencil /> Modifier
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => setToDelete(c)}
+                                  >
+                                    <Trash2 /> Supprimer
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Modal création / édition */}

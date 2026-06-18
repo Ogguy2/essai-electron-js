@@ -28,6 +28,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   userCreateSchema, userUpdateSchema, passwordSchema,
   type UserCreateFormValues, type UserUpdateFormValues, type PasswordFormValues,
@@ -165,7 +166,9 @@ export function UtilisateursModule({ user }: Props): React.JSX.Element {
         </Button>
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {loading && (
+        <TableSkeleton columns={['w-32', 'flex-1', 'w-48', 'w-20', 'w-16', 'w-8']} />
+      )}
       {!loading && rows.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucun utilisateur.</p>
       )}

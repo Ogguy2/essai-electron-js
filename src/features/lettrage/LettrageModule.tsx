@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -326,9 +327,10 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
             </div>
 
             {loadingLignes ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                Chargement...
-              </div>
+              <TableSkeleton
+                card={false}
+                columns={['w-8', 'w-24', 'w-20', 'w-28', 'flex-1', 'w-24', 'w-24', 'w-16']}
+              />
             ) : (
               <Table>
                 <TableHeader>

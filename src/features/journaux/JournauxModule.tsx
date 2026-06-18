@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { KpiGridSkeleton, CardListSkeleton } from '@/components/skeletons';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -197,7 +198,12 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
         )}
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {loading && (
+        <div className="flex flex-col gap-6">
+          <KpiGridSkeleton className="grid grid-cols-2 gap-3 xl:grid-cols-4" />
+          <CardListSkeleton count={4} className="grid grid-cols-1 gap-4 xl:grid-cols-2" />
+        </div>
+      )}
       {!loading && rows.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucun journal.</p>
       )}

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Layers, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/skeletons';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -48,7 +50,10 @@ function TabBalanceConso({ societeId, dateDebut, dateFin }: TabBalanceConsoProps
     return () => { cancelled = true; };
   }, [societeId, dateDebut, dateFin]);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return (
+      <TableSkeleton columns={['w-24', 'flex-1', 'w-28', 'w-28', 'w-28']} />
+    );
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Aucun mouvement sur la période.</p>;
   return <BalanceTable rows={rows} />;
 }
@@ -79,7 +84,15 @@ function TabResultatConso({ societeId, dateDebut, dateFin }: TabResultatConsoPro
     return () => { cancelled = true; };
   }, [societeId, dateDebut, dateFin]);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-3/4 rounded-lg" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+      </div>
+    );
   if (!res) return <p className="text-sm text-muted-foreground">Aucune donnée.</p>;
   return <ResultatView res={res} />;
 }

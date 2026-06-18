@@ -25,6 +25,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
+import { TableSkeleton } from '@/components/skeletons';
 import { tiersInputSchema, type TiersFormValues } from '@/shared/schemas';
 import type { AuthUser, Magasin, Tiers } from '@/shared/ipc';
 
@@ -205,7 +206,9 @@ export function TiersModule({ user: _user, magasin }: Props): React.JSX.Element 
         </div>
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {loading && (
+        <TableSkeleton columns={['w-28', 'flex-1', 'w-32', 'w-40', 'w-32', 'w-8']} />
+      )}
       {!loading && filtered.length === 0 && (
         <p className="text-sm text-muted-foreground">Aucun tiers.</p>
       )}

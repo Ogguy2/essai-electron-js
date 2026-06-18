@@ -3,6 +3,8 @@ import { BarChart3, Printer, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TableSkeleton } from '@/components/skeletons';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -253,7 +255,12 @@ function GrandLivreTable({ rows, loading }: GrandLivreTableProps): React.JSX.Ele
   const totCredit = rows.reduce((a, r) => a + r.credit, 0);
   const dernierSolde = rows.length > 0 ? rows[rows.length - 1].solde_progressif : 0;
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return (
+      <TableSkeleton
+        columns={['w-24', 'w-16', 'w-20', 'flex-1', 'w-24', 'w-24', 'w-28', 'w-12']}
+      />
+    );
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
@@ -345,7 +352,8 @@ function TabBalance({ magasin }: { magasin: Magasin }): React.JSX.Element {
     return () => { cancelled = true; };
   }, [magasin]);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return <TableSkeleton columns={['w-24', 'flex-1', 'w-28', 'w-28', 'w-28']} />;
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Aucun mouvement.</p>;
   return <BalanceTable rows={rows} />;
 }
@@ -494,7 +502,15 @@ function TabResultat({ magasin }: { magasin: Magasin }): React.JSX.Element {
     return () => { cancelled = true; };
   }, [magasin]);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-3/4 rounded-lg" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+      </div>
+    );
   if (!res) return <p className="text-sm text-muted-foreground">Aucune donnée.</p>;
   return <ResultatView res={res} />;
 }
@@ -533,7 +549,13 @@ function TabEcheancier({ magasin }: { magasin: Magasin }): React.JSX.Element {
   }));
   const totalVentil = ventilation.reduce((s, v) => s + v.total, 0);
 
-  if (loading) return <p className="text-sm text-muted-foreground">Chargement…</p>;
+  if (loading)
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <TableSkeleton columns={['w-24', 'flex-1', 'w-28', 'w-24', 'w-28']} />
+      </div>
+    );
 
   return (
     <div className="flex flex-col gap-4">

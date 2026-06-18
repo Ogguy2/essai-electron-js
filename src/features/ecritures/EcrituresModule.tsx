@@ -29,6 +29,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
+import { TableSkeleton } from '@/components/skeletons';
 import { ecritureInputSchema, type EcritureFormValues } from '@/shared/schemas';
 import { estAncreCollectif } from '@/domain/compte';
 import type {
@@ -1090,11 +1091,16 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
         </div>
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground mb-4">Chargement...</p>}
+      {loading && (
+        <TableSkeleton
+          columns={['w-24', 'w-24', 'flex-1', 'w-16', 'w-20', 'w-20', 'w-20', 'w-8']}
+        />
+      )}
 
       {/* Tableau DANS UNE CARTE */}
+      {!loading && (
       <div className="rounded-lg border border-border bg-card overflow-hidden">
-        {!loading && filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-sm font-semibold text-muted-foreground">
               {rows.length === 0
@@ -1214,6 +1220,7 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
           </Table>
         )}
       </div>
+      )}
 
       {/* Modal saisie */}
       {saisieOpen && (
