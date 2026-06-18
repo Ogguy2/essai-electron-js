@@ -83,6 +83,15 @@ export function logError(context: string, error: unknown): void {
   }
 
   let line = `${timestamp} [ERROR] [${context}] ${message}`;
+  // Détail spécifique node-odbc : la vraie cause HFSQL est dans `odbcErrors`
+  // (le message « Error executing the sql statement » est générique).
+  const odbcErrors = (error as { odbcErrors?: Array<{ state?: string; code?: number; message?: string }> })
+    ?.odbcErrors;
+  if (Array.isArray(odbcErrors)) {
+    for (const o of odbcErrors) {
+      line += `\n  ODBC [${o.state ?? ''} ${o.code ?? ''}] ${o.message ?? ''}`;
+    }
+  }
   if (stack) {
     line += `\n${stack}`;
   }

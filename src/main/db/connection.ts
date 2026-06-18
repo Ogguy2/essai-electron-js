@@ -12,6 +12,15 @@ import { logInfo, logError } from '../logger';
 
 let pool: odbc.Pool | null = null;
 
+/** Extrait le détail HFSQL réel d'une erreur node-odbc (sinon message générique). */
+function odbcDetail(err: unknown): string {
+  const e = err as { odbcErrors?: Array<{ state?: string; code?: number; message?: string }> };
+  if (Array.isArray(e?.odbcErrors) && e.odbcErrors.length) {
+    return e.odbcErrors.map((o) => `[${o.state ?? ''} ${o.code ?? ''}] ${o.message ?? ''}`).join(' | ');
+  }
+  return (err as Error)?.message ?? String(err);
+}
+
 export async function getPool(): Promise<odbc.Pool> {
   if (!pool) {
     // Petit pool : app desktop mono-utilisateur. Limite les connexions ouvertes
@@ -41,7 +50,8 @@ export async function query<T = unknown>(sql: string): Promise<T[]> {
   } catch (err) {
     // Contexte SQL volontairement tronqué (~80 car.) pour éviter de consigner
     // d'éventuels INSERT contenant des hachages de mots de passe.
-    const sqlPrefix = sql.slice(0, 80);
+    const sqlPrefix = sql.slice(0, 120);
+    console.error(`[db.query] ${odbcDetail(err)}\n  SQL: ${sqlPrefix}`);
     logError('db.query', err);
     logInfo('db.query', `échec sur SQL: ${sqlPrefix}`);
     // On relance : les appelants gèrent toujours l'erreur eux-mêmes.
@@ -83,6 +93,7 @@ export async function withTransaction(
     } catch {
       /* rollback best-effort */
     }
+    console.error(`[db.withTransaction] ${odbcDetail(err)}`);
     logError('db.withTransaction', err);
     throw err;
   } finally {
