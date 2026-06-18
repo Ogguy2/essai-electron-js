@@ -37,6 +37,7 @@ export interface Exercice {
   date_fin: string;
   statut: 'ouvert' | 'cloture';
 }
+export type ExerciceInput = Omit<Exercice, 'id' | 'magasin_id' | 'statut'>;
 
 export interface Compte {
   id: number;

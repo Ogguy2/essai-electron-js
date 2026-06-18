@@ -23,6 +23,7 @@ export type {
   Magasin,
   MagasinInput,
   Exercice,
+  ExerciceInput,
   Compte,
   CompteInput,
   Journal,
@@ -45,6 +46,7 @@ import type {
   Magasin,
   MagasinInput,
   Exercice,
+  ExerciceInput,
   Compte,
   CompteInput,
   Journal,
@@ -74,6 +76,10 @@ export const IPC = {
   magasinsUpdate: 'magasins:update',
   magasinsDelete: 'magasins:delete',
   exercicesList: 'exercices:list',
+  exercicesCreate: 'exercices:create',
+  exercicesUpdate: 'exercices:update',
+  exercicesClose: 'exercices:close',
+  exercicesReopen: 'exercices:reopen',
   comptesList: 'comptes:list',
   comptesCreate: 'comptes:create',
   comptesUpdate: 'comptes:update',
@@ -123,6 +129,10 @@ export interface Api {
   };
   exercices: {
     list(magasinId: number): Promise<IpcResult<Exercice[]>>;
+    create(magasinId: number, input: ExerciceInput): Promise<IpcResult<Exercice>>;
+    update(id: number, input: ExerciceInput): Promise<IpcResult<Exercice>>;
+    close(id: number): Promise<IpcResult<null>>;
+    reopen(id: number): Promise<IpcResult<null>>;
   };
   comptes: {
     list(magasinId: number): Promise<IpcResult<Compte[]>>;
