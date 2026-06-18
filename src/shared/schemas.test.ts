@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema, userCreateSchema, passwordSchema, exerciceInputSchema } from './schemas';
+import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema, userCreateSchema, passwordSchema, exerciceInputSchema, ecritureInputSchema, ligneInputSchema } from './schemas';
 
 const base = { numero: '601', libelle: 'Achats', classe: 6, collectif: false, lettrable: false };
 
@@ -160,5 +160,66 @@ describe('exerciceInputSchema', () => {
     const res = exerciceInputSchema.safeParse({ ...base, libelle: '  Exercice 2025  ' });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.libelle).toBe('Exercice 2025');
+  });
+});
+
+describe('ligneInputSchema', () => {
+  const baseLigne = { compte: '601', tiers: null, libelle: 'Test', debit: 0, credit: 100, echeance: null, lettrage: null };
+
+  it('refuse une ligne avec débit ET crédit non nuls', () => {
+    const res = ligneInputSchema.safeParse({ ...baseLigne, debit: 100, credit: 100 });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Chaque ligne porte un débit OU un crédit.');
+  });
+
+  it('refuse une ligne avec débit ET crédit à zéro', () => {
+    const res = ligneInputSchema.safeParse({ ...baseLigne, debit: 0, credit: 0 });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Chaque ligne porte un débit OU un crédit.');
+  });
+
+  it('accepte une ligne crédit valide', () => {
+    const res = ligneInputSchema.safeParse(baseLigne);
+    expect(res.success).toBe(true);
+  });
+
+  it('accepte une ligne débit valide', () => {
+    const res = ligneInputSchema.safeParse({ ...baseLigne, debit: 500, credit: 0 });
+    expect(res.success).toBe(true);
+  });
+});
+
+describe('ecritureInputSchema', () => {
+  const ligneDeb = { compte: '601', tiers: null, libelle: 'Achat', debit: 500, credit: 0, echeance: null, lettrage: null };
+  const ligneCredit = { compte: '401', tiers: null, libelle: 'Fournisseur', debit: 0, credit: 500, echeance: null, lettrage: null };
+  const base = {
+    exercice_id: 1,
+    journal: 'ACHT',
+    date_ecriture: '2026-06-01',
+    libelle: 'Facture',
+    lignes: [ligneDeb, ligneCredit],
+  };
+
+  it('refuse une écriture déséquilibrée', () => {
+    const res = ecritureInputSchema.safeParse({
+      ...base,
+      lignes: [ligneDeb, { ...ligneCredit, credit: 400 }],
+    });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Écriture déséquilibrée (Σ débit ≠ Σ crédit).');
+  });
+
+  it('refuse une ligne avec débit ET crédit', () => {
+    const res = ecritureInputSchema.safeParse({
+      ...base,
+      lignes: [{ ...ligneDeb, credit: 100 }, ligneCredit],
+    });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Chaque ligne porte un débit OU un crédit.');
+  });
+
+  it('accepte une écriture équilibrée valide', () => {
+    const res = ecritureInputSchema.safeParse(base);
+    expect(res.success).toBe(true);
   });
 });

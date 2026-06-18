@@ -34,6 +34,13 @@ export type {
   UserCreateInput,
   UserUpdateInput,
   UpdateReadyPayload,
+  StatutEcriture,
+  EcritureLigne,
+  Ecriture,
+  EcritureListItem,
+  EcritureAvecLignes,
+  LigneInput,
+  EcritureInput,
 } from '../types/domain';
 
 // --- Imports locaux pour construire IPC et Api ---
@@ -56,6 +63,9 @@ import type {
   User,
   UserCreateInput,
   UserUpdateInput,
+  EcritureListItem,
+  EcritureAvecLignes,
+  EcritureInput,
 } from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
@@ -97,6 +107,14 @@ export const IPC = {
   usersUpdate: 'users:update',
   usersSetPassword: 'users:set-password',
   usersDelete: 'users:delete',
+  ecrituresList: 'ecritures:list',
+  ecrituresGet: 'ecritures:get',
+  ecrituresCreate: 'ecritures:create',
+  ecrituresUpdate: 'ecritures:update',
+  ecrituresValidate: 'ecritures:validate',
+  ecrituresInvalidate: 'ecritures:invalidate',
+  ecrituresReverse: 'ecritures:reverse',
+  ecrituresDelete: 'ecritures:delete',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -157,6 +175,16 @@ export interface Api {
     create(input: UserCreateInput): Promise<IpcResult<User>>;
     update(id: number, input: UserUpdateInput): Promise<IpcResult<User>>;
     setPassword(id: number, password: string): Promise<IpcResult<null>>;
+    delete(id: number): Promise<IpcResult<null>>;
+  };
+  ecritures: {
+    list(magasinId: number): Promise<IpcResult<EcritureListItem[]>>;
+    get(id: number): Promise<IpcResult<EcritureAvecLignes>>;
+    create(magasinId: number, input: EcritureInput): Promise<IpcResult<EcritureAvecLignes>>;
+    update(id: number, input: EcritureInput): Promise<IpcResult<EcritureAvecLignes>>;
+    validate(id: number): Promise<IpcResult<EcritureAvecLignes>>;
+    invalidate(id: number): Promise<IpcResult<null>>;
+    reverse(id: number): Promise<IpcResult<EcritureAvecLignes>>;
     delete(id: number): Promise<IpcResult<null>>;
   };
 }

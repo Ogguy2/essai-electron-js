@@ -104,6 +104,36 @@ export const passwordSchema = z.object({
 });
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
 
+/** Saisie d'une ligne d'écriture. */
+export const ligneInputSchema = z
+  .object({
+    compte: z.string().trim().min(1, 'Compte obligatoire.'),
+    tiers: z.string().trim().nullable(),
+    libelle: z.string().trim(),
+    debit: z.number().int().min(0),
+    credit: z.number().int().min(0),
+    echeance: z.string().nullable(),
+    lettrage: z.string().nullable(),
+  })
+  .refine((l) => (l.debit > 0) !== (l.credit > 0), { message: 'Chaque ligne porte un débit OU un crédit.' });
+
+/** Saisie d'une écriture comptable. */
+export const ecritureInputSchema = z
+  .object({
+    exercice_id: z.number().int().positive(),
+    journal: z.string().trim().min(1, 'Journal obligatoire.'),
+    date_ecriture: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date invalide.'),
+    libelle: z.string().trim().min(1, 'Libellé obligatoire.'),
+    lignes: z.array(ligneInputSchema).min(2, 'Au moins 2 lignes.'),
+  })
+  .refine((e) => {
+    const d = e.lignes.reduce((s, l) => s + l.debit, 0);
+    const c = e.lignes.reduce((s, l) => s + l.credit, 0);
+    return d === c && d > 0;
+  }, { message: 'Écriture déséquilibrée (Σ débit ≠ Σ crédit).', path: ['lignes'] });
+
+export type EcritureFormValues = z.infer<typeof ecritureInputSchema>;
+
 /** Saisie d'un exercice comptable (sans id, magasin_id et statut). */
 export const exerciceInputSchema = z
   .object({

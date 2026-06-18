@@ -62,6 +62,16 @@ const api: Api = {
     setPassword: (id, password) => ipcRenderer.invoke(IPC.usersSetPassword, id, password),
     delete: (id) => ipcRenderer.invoke(IPC.usersDelete, id),
   },
+  ecritures: {
+    list: (magasinId) => ipcRenderer.invoke(IPC.ecrituresList, magasinId),
+    get: (id) => ipcRenderer.invoke(IPC.ecrituresGet, id),
+    create: (magasinId, input) => ipcRenderer.invoke(IPC.ecrituresCreate, magasinId, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.ecrituresUpdate, id, input),
+    validate: (id) => ipcRenderer.invoke(IPC.ecrituresValidate, id),
+    invalidate: (id) => ipcRenderer.invoke(IPC.ecrituresInvalidate, id),
+    reverse: (id) => ipcRenderer.invoke(IPC.ecrituresReverse, id),
+    delete: (id) => ipcRenderer.invoke(IPC.ecrituresDelete, id),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

@@ -106,3 +106,29 @@ export interface UserUpdateInput {
   role: Role;
   active: boolean;
 }
+
+export type StatutEcriture = 'brouillon' | 'validee' | 'invalidee';
+
+export interface EcritureLigne {
+  id: number; ecriture_id: number; compte: string; tiers: string | null;
+  libelle: string; debit: number; credit: number; echeance: string | null; lettrage: string | null;
+}
+
+export interface Ecriture {
+  id: number; magasin_id: number; exercice_id: number; journal: string; ref: string;
+  date_ecriture: string; libelle: string; statut: StatutEcriture;
+  reversal_of_id: number | null; validee_at: string | null; cree_par: string;
+}
+
+export interface EcritureListItem extends Ecriture { total_debit: number; total_credit: number; }
+
+export interface EcritureAvecLignes extends EcritureListItem { lignes: EcritureLigne[]; }
+
+export interface LigneInput {
+  compte: string; tiers: string | null; libelle: string;
+  debit: number; credit: number; echeance: string | null; lettrage: string | null;
+}
+
+export interface EcritureInput {
+  exercice_id: number; journal: string; date_ecriture: string; libelle: string; lignes: LigneInput[];
+}
