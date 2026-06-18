@@ -20,7 +20,7 @@ createRoot(container).render(
   <React.StrictMode>
     <TooltipProvider>
       <App />
-      <Toaster />
+      <Toaster position="top-center" />
     </TooltipProvider>
   </React.StrictMode>,
 );

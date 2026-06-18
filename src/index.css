@@ -129,4 +129,9 @@
   html {
     @apply font-sans;
     }
+  /* Curseur main sur tous les boutons actifs (sans modifier les composants ui/). */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+    }
 }
