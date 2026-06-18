@@ -47,3 +47,10 @@ export function requireAdmin(): void {
     throw new AppError('FORBIDDEN', "Action réservée à l'administrateur.");
   }
 }
+
+/** Lève AppError('FORBIDDEN') si aucune session (Admin ou Comptable acceptés). */
+export function requireAuth(): void {
+  if (!currentSession()) {
+    throw new AppError('FORBIDDEN', 'Authentification requise.');
+  }
+}
