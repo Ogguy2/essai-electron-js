@@ -77,7 +77,7 @@ export async function tableCount(conn, table) {
 }
 
 /** Tables de DONNÉES gérées par seed/fresh (app_users est hors périmètre). */
-export const DATA_TABLES = ['tiers', 'journaux', 'comptes', 'exercices', 'magasins', 'societes'];
+export const DATA_TABLES = ['ecriture_lignes', 'ecritures', 'tiers', 'journaux', 'comptes', 'exercices', 'magasins', 'societes'];
 
 export const DEFAULT_JOURNAUX = [
   { code: 'AN', libelle: 'A-nouveaux', type: 'OD' },
