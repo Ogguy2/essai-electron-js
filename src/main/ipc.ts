@@ -1,9 +1,10 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput, type EcritureListItem, type EcritureAvecLignes, type EcritureInput } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
 import * as tiers from './services/tiers';
 import * as users from './services/users';
+import * as ecritures from './services/ecritures';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
@@ -134,4 +135,21 @@ export function registerIpcHandlers(): void {
     wrap<null>(async () => { await users.setPassword(id, password); return null; }, 'users:set-password'));
   ipcMain.handle(IPC.usersDelete, (_e, id: number) =>
     wrap<null>(async () => { await users.remove(id); return null; }, 'users:delete'));
+
+  ipcMain.handle(IPC.ecrituresList, (_e, magasinId: number) =>
+    wrap<EcritureListItem[]>(() => ecritures.list(magasinId), 'ecritures:list'));
+  ipcMain.handle(IPC.ecrituresGet, (_e, id: number) =>
+    wrap<EcritureAvecLignes>(() => ecritures.get(id), 'ecritures:get'));
+  ipcMain.handle(IPC.ecrituresCreate, (_e, magasinId: number, input: EcritureInput) =>
+    wrap<EcritureAvecLignes>(() => ecritures.create(magasinId, input), 'ecritures:create'));
+  ipcMain.handle(IPC.ecrituresUpdate, (_e, id: number, input: EcritureInput) =>
+    wrap<EcritureAvecLignes>(() => ecritures.update(id, input), 'ecritures:update'));
+  ipcMain.handle(IPC.ecrituresValidate, (_e, id: number) =>
+    wrap<EcritureAvecLignes>(() => ecritures.validate(id), 'ecritures:validate'));
+  ipcMain.handle(IPC.ecrituresInvalidate, (_e, id: number) =>
+    wrap<null>(async () => { await ecritures.invalidate(id); return null; }, 'ecritures:invalidate'));
+  ipcMain.handle(IPC.ecrituresReverse, (_e, id: number) =>
+    wrap<EcritureAvecLignes>(() => ecritures.reverse(id), 'ecritures:reverse'));
+  ipcMain.handle(IPC.ecrituresDelete, (_e, id: number) =>
+    wrap<null>(async () => { await ecritures.remove(id); return null; }, 'ecritures:delete'));
 }
