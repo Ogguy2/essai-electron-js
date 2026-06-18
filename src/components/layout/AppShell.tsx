@@ -6,7 +6,7 @@ import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
 import { brouillonsCount } from '@/lib/mock-data';
 import { SocietesModule } from '@/features/societes/SocietesModule';
 import { MagasinsModule } from '@/features/magasins/MagasinsModule';
-import type { AuthUser, Magasin, Exercice } from '@/shared/ipc';
+import type { AuthUser, Magasin, Societe, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
   user: AuthUser;
@@ -28,20 +28,25 @@ function Placeholder({ route }: { route: RouteId }): React.JSX.Element {
 
 export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
   const [route, setRoute] = useState<RouteId>('dashboard');
+  const [societes, setSocietes] = useState<Societe[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [magasin, setMagasin] = useState<Magasin | null>(null);
   const [exercices, setExercices] = useState<Exercice[]>([]);
   const [exercice, setExercice] = useState<Exercice | null>(null);
 
-  // Charge la liste des magasins (référentiel global).
-  async function loadMagasins() {
-    const res = await window.api.magasins.list();
-    if (res.success) {
-      setMagasins(res.data);
-      setMagasin((cur) => cur ?? res.data[0] ?? null);
+  // Charge sociétés + magasins (référentiel global).
+  async function loadReferentiel() {
+    const [sRes, mRes] = await Promise.all([
+      window.api.societes.list(),
+      window.api.magasins.list(),
+    ]);
+    if (sRes.success) setSocietes(sRes.data);
+    if (mRes.success) {
+      setMagasins(mRes.data);
+      setMagasin((cur) => cur ?? mRes.data[0] ?? null);
     }
   }
-  useEffect(() => { void loadMagasins(); }, []);
+  useEffect(() => { void loadReferentiel(); }, []);
 
   // Charge les exercices du magasin courant.
   useEffect(() => {
@@ -58,9 +63,9 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
   function renderRoute(): React.JSX.Element {
     switch (route) {
       case 'societes':
-        return <SocietesModule user={user} onChanged={loadMagasins} />;
+        return <SocietesModule user={user} onChanged={loadReferentiel} />;
       case 'magasins':
-        return <MagasinsModule user={user} onChanged={loadMagasins} />;
+        return <MagasinsModule user={user} onChanged={loadReferentiel} />;
       default:
         return <Placeholder route={route} />;
     }
@@ -76,6 +81,7 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
       <SidebarInset className="flex h-screen min-w-0 flex-col overflow-hidden">
         <Topbar
           route={route}
+          societes={societes}
           magasin={magasin}
           magasins={magasins}
           onMagasinChange={setMagasin}

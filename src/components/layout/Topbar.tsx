@@ -12,11 +12,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
-import { societeById } from '@/lib/mock-data';
-import type { Magasin, Exercice, AuthUser } from '@/shared/ipc';
+import type { Magasin, Exercice, AuthUser, Societe } from '@/shared/ipc';
 
 interface TopbarProps {
   route: RouteId;
+  societes: Societe[];
   magasin: Magasin | null;
   magasins: Magasin[];
   onMagasinChange: (m: Magasin) => void;
@@ -38,6 +38,7 @@ function initials(name: string): string {
 
 export function Topbar({
   route,
+  societes,
   magasin,
   magasins,
   onMagasinChange,
@@ -47,7 +48,8 @@ export function Topbar({
   user,
   onLogout,
 }: TopbarProps): React.JSX.Element {
-  const societesAvecMagasins = Object.values(societeById).filter((s) =>
+  const societeMap = new Map(societes.map((s) => [s.id, s]));
+  const societesAvecMagasins = societes.filter((s) =>
     magasins.some((m) => m.societe_id === s.id),
   );
 
@@ -66,7 +68,7 @@ export function Topbar({
             </span>
             <span className="flex flex-col leading-tight">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {magasin ? (societeById[magasin.societe_id]?.raison_sociale ?? 'Magasin') : '—'}
+                {magasin ? (societeMap.get(magasin.societe_id)?.raison_sociale ?? '—') : '—'}
               </span>
               <span className="text-[13px] font-bold">
                 {magasin ? magasin.libelle.replace('Siconex - ', '') : '—'}
