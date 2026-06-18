@@ -27,6 +27,8 @@ export type {
   CompteInput,
   Journal,
   JournalInput,
+  Tiers,
+  TiersInput,
   UpdateReadyPayload,
 } from '../types/domain';
 
@@ -44,6 +46,8 @@ import type {
   CompteInput,
   Journal,
   JournalInput,
+  Tiers,
+  TiersInput,
 } from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
@@ -72,6 +76,10 @@ export const IPC = {
   journauxCreate: 'journaux:create',
   journauxUpdate: 'journaux:update',
   journauxDelete: 'journaux:delete',
+  tiersList: 'tiers:list',
+  tiersCreate: 'tiers:create',
+  tiersUpdate: 'tiers:update',
+  tiersDelete: 'tiers:delete',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -115,6 +123,12 @@ export interface Api {
     list(magasinId: number): Promise<IpcResult<Journal[]>>;
     create(magasinId: number, input: JournalInput): Promise<IpcResult<Journal>>;
     update(id: number, input: JournalInput): Promise<IpcResult<Journal>>;
+    delete(id: number): Promise<IpcResult<null>>;
+  };
+  tiers: {
+    list(magasinId: number): Promise<IpcResult<Tiers[]>>;
+    create(magasinId: number, input: TiersInput): Promise<IpcResult<Tiers>>;
+    update(id: number, input: TiersInput): Promise<IpcResult<Tiers>>;
     delete(id: number): Promise<IpcResult<null>>;
   };
 }

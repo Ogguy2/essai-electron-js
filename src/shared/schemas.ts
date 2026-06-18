@@ -55,3 +55,22 @@ export const journalInputSchema = z.object({
   active: z.boolean(),
 });
 export type JournalFormValues = z.infer<typeof journalInputSchema>;
+
+/** Saisie d'un tiers (sans id, magasin_id, comptes et archived). */
+export const tiersInputSchema = z
+  .object({
+    code: z.string().trim().min(1, 'Le code du tiers est obligatoire.').max(20, 'Code trop long (20 max).'),
+    raison_sociale: z.string().trim().min(1, 'La raison sociale est obligatoire.'),
+    est_client: z.boolean(),
+    est_fournisseur: z.boolean(),
+    telephone: z.string().trim(),
+    adresse: z.string().trim(),
+    registre_commerce: z.string().trim(),
+    plafond_credit: z.number().int().min(0, 'Le plafond doit être positif.'),
+    bloque: z.boolean(),
+  })
+  .refine((v) => v.est_client || v.est_fournisseur, {
+    message: 'Cochez « Client » et/ou « Fournisseur ».',
+    path: ['est_client'],
+  });
+export type TiersFormValues = z.infer<typeof tiersInputSchema>;

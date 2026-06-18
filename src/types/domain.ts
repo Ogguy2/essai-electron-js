@@ -59,6 +59,24 @@ export interface Journal {
 }
 export type JournalInput = Omit<Journal, 'id' | 'magasin_id'>;
 
+export interface Tiers {
+  id: number;
+  magasin_id: number;
+  code: string;
+  raison_sociale: string;
+  est_client: boolean;
+  est_fournisseur: boolean;
+  telephone: string;
+  adresse: string;
+  registre_commerce: string;
+  plafond_credit: number;
+  bloque: boolean;
+  compte_client: string;
+  compte_fournisseur: string;
+  archived: boolean;
+}
+export type TiersInput = Omit<Tiers, 'id' | 'magasin_id' | 'compte_client' | 'compte_fournisseur' | 'archived'>;
+
 /** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
 export interface UpdateReadyPayload {
   version: string;
