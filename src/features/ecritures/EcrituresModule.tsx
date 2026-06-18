@@ -3,8 +3,9 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
-  BookText, Plus, Pencil, Trash2, MoreHorizontal,
-  Search, X, Save, CheckCircle, Eye,
+  Plus, Pencil, Trash2, MoreHorizontal,
+  Search, X, Save, CheckCircle, AlertTriangle,
+  Eye, Pen, Check, BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -26,7 +27,7 @@ import {
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter,
 } from '@/components/ui/table';
 import {
   Combobox,
@@ -50,8 +51,16 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function fmtMontant(v: number): string {
-  return v.toLocaleString('fr-FR');
+/** Format FCFA avec separateurs de milliers (espace ASCII). */
+function fmtMontant(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
+/** JJ/MM/AAAA */
+function fmtDate(iso: string): string {
+  if (!iso || iso.length < 10) return iso;
+  const [y, m, d] = iso.slice(0, 10).split('-');
+  return `${d}/${m}/${y}`;
 }
 
 function ligneVide() {
@@ -69,7 +78,7 @@ const DEFAULT_VALUES = (exerciceId: number): EcritureFormValues => ({
 // ─── statut badge ─────────────────────────────────────────────────────────────
 
 function StatutBadge({ statut }: { statut: StatutEcriture }): React.JSX.Element {
-  if (statut === 'validee') return <Badge variant="default">Validée</Badge>;
+  if (statut === 'validee') return <Badge variant="default" className="bg-green-600/15 text-green-700 dark:text-green-400 border-green-600/20 hover:bg-green-600/15">Validée</Badge>;
   if (statut === 'invalidee') return <Badge variant="destructive">Invalidée</Badge>;
   return <Badge variant="secondary">Brouillon</Badge>;
 }
@@ -117,6 +126,7 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
   const { fields, append, remove } = useFieldArray({ control, name: 'lignes' });
 
   const lignesWatch = watch('lignes');
+  const dateWatch = watch('date_ecriture');
 
   const totDebit = useMemo(
     () => lignesWatch.reduce((s, l) => s + (Number(l.debit) || 0), 0),
@@ -128,6 +138,10 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
   );
   const ecart = Math.abs(totDebit - totCredit);
   const equilibree = totDebit === totCredit && totDebit > 0;
+
+  const exerciceOk = exercice
+    ? dateWatch >= exercice.date_debut && dateWatch <= exercice.date_fin && exercice.statut === 'ouvert'
+    : false;
 
   async function submit(values: EcritureFormValues, validate: boolean) {
     setServerError(null);
@@ -163,22 +177,26 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
     onSaved();
   }
 
+  // journaux sans AN
+  const journauxSaisie = journaux.filter((j) => j.code !== 'AN');
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-[900px]" showCloseButton={false}>
-        <DialogHeader>
-          <div className="flex items-start gap-[13px] border-b border-border pb-[18px] -mt-1">
+      <DialogContent className="sm:max-w-[940px]" showCloseButton={false}>
+        {/* En-tête modal */}
+        <DialogHeader className="border-b border-border pb-[18px] -mt-1">
+          <div className="flex items-start gap-[13px]">
             <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <BookText size={20} />
+              <Pen size={18} />
             </span>
             <div className="flex-1 min-w-0 pr-7">
-              <p className="text-[10.5px] font-bold uppercase tracking-widest text-primary mb-1">
-                Écritures · partie double
+              <p className="text-[10.5px] font-extrabold uppercase tracking-widest text-primary mb-0.5">
+                {editing ? 'Modification' : 'Saisie'} · partie double
               </p>
               <DialogTitle className="text-[17px] font-bold leading-tight">
                 {editing ? 'Modifier l’écriture' : 'Nouvelle écriture'}
               </DialogTitle>
-              <p className="mt-1 text-[13px] font-medium text-muted-foreground leading-snug">
+              <p className="mt-0.5 text-[13px] font-medium text-muted-foreground leading-snug">
                 {magasin.libelle}{exercice ? ` · Exercice ${exercice.libelle}` : ''}
               </p>
             </div>
@@ -194,18 +212,22 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
           </div>
         </DialogHeader>
 
+        {/* Erreur serveur */}
         {serverError && (
-          <p className="text-sm text-destructive font-semibold px-1 -mb-2">{serverError}</p>
+          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2.5 text-sm font-semibold -mb-1">
+            <AlertTriangle size={15} className="flex-none" />
+            {serverError}
+          </div>
         )}
 
         <form
           id="ecriture-form"
           onSubmit={handleSubmit((v) => void submit(v, false))}
-          className="flex flex-col gap-4 pb-2 pt-1"
+          className="flex flex-col gap-4 pt-1 pb-2"
         >
-          {/* En-tête : journal, date, libellé */}
+          {/* 3 champs en-tête */}
           <div className="flex flex-wrap gap-3">
-            <div className="flex flex-col gap-1.5 w-[200px]">
+            <div className="flex flex-col gap-1.5" style={{ width: 200 }}>
               <Label>Journal</Label>
               <Controller
                 name="journal"
@@ -216,7 +238,7 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                       <SelectValue placeholder="Choisir…" />
                     </SelectTrigger>
                     <SelectContent>
-                      {journaux.map((j) => (
+                      {journauxSaisie.map((j) => (
                         <SelectItem key={j.code} value={j.code}>
                           {j.code} — {j.libelle}
                         </SelectItem>
@@ -225,265 +247,266 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                   </Select>
                 )}
               />
-              {errors.journal && <p className="text-sm text-destructive">{errors.journal.message}</p>}
+              {errors.journal && <p className="text-xs text-destructive">{errors.journal.message}</p>}
             </div>
 
-            <div className="flex flex-col gap-1.5 w-[170px]">
+            <div className="flex flex-col gap-1.5" style={{ width: 170 }}>
               <Label>Date d&apos;écriture</Label>
               <Input
                 type="date"
+                className={!exerciceOk && dateWatch ? 'border-amber-500 focus-visible:ring-amber-500' : ''}
                 aria-invalid={errors.date_ecriture ? 'true' : undefined}
                 {...register('date_ecriture')}
               />
-              {errors.date_ecriture && <p className="text-sm text-destructive">{errors.date_ecriture.message}</p>}
+              {errors.date_ecriture && <p className="text-xs text-destructive">{errors.date_ecriture.message}</p>}
             </div>
 
             <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
               <Label>Libellé de la pièce</Label>
               <Input
-                placeholder="ex. Facture FV-1062"
+                placeholder="ex. Facture FV-1062 — Boutique Adjamé"
                 aria-invalid={errors.libelle ? 'true' : undefined}
                 {...register('libelle')}
               />
-              {errors.libelle && <p className="text-sm text-destructive">{errors.libelle.message}</p>}
+              {errors.libelle && <p className="text-xs text-destructive">{errors.libelle.message}</p>}
             </div>
           </div>
 
-          {/* Tableau de lignes */}
-          <div className="overflow-x-auto rounded-md border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/40">
-                <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 180 }}>Compte</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 160 }}>Tiers</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 140 }}>Libelle</th>
-                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Debit</th>
-                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Credit</th>
-                  <th className="px-2 py-2" style={{ width: 36 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((field, i) => {
-                  const compteVal = lignesWatch[i]?.compte ?? '';
-                  const estCollectif = compteVal ? estAncreCollectif(compteVal) : false;
-                  const compteLibelle = compteVal
-                    ? (comptes.find((c) => c.numero === compteVal)?.libelle ?? '')
-                    : '';
-
-                  return (
-                    <tr key={field.id} className="border-t border-border">
-                      {/* Compte */}
-                      <td className="px-1 py-1">
-                        <Controller
-                          name={`lignes.${i}.compte`}
-                          control={control}
-                          render={({ field: cf }) => (
-                            <Combobox<string>
-                              value={cf.value || null}
-                              onValueChange={(v) => {
-                                cf.onChange(v ?? '');
-                                // si on change de compte et que le nouveau n'est pas collectif, vider le tiers
-                                if (!v || !estAncreCollectif(v)) {
-                                  setValue(`lignes.${i}.tiers`, null);
-                                }
-                              }}
-                            >
-                              <ComboboxInput
-                                className="h-9 text-xs"
-                                placeholder={compteVal ? `${compteVal}${compteLibelle ? ' — ' + compteLibelle : ''}` : 'Compte…'}
-                                showClear={!!cf.value}
-                              />
-                              <ComboboxContent>
-                                <ComboboxList>
-                                  <ComboboxEmpty>Aucun compte.</ComboboxEmpty>
-                                  {comptes.map((c) => (
-                                    <ComboboxItem key={c.numero} value={c.numero}>
-                                      <span className="font-mono text-primary mr-1">{c.numero}</span>
-                                      <span>{c.libelle}</span>
-                                    </ComboboxItem>
-                                  ))}
-                                </ComboboxList>
-                              </ComboboxContent>
-                            </Combobox>
-                          )}
-                        />
-                      </td>
-
-                      {/* Tiers */}
-                      <td className="px-1 py-1">
-                        <Controller
-                          name={`lignes.${i}.tiers`}
-                          control={control}
-                          render={({ field: tf }) => (
-                            <Select
-                              value={tf.value ?? ''}
-                              onValueChange={(v) => tf.onChange(v || null)}
-                              disabled={!estCollectif}
-                            >
-                              <SelectTrigger className="h-9 text-xs" style={{ opacity: estCollectif ? 1 : 0.5 }}>
-                                <SelectValue placeholder={estCollectif ? 'Sélectionner…' : '—'} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="">—</SelectItem>
-                                {tiers.map((t) => (
-                                  <SelectItem key={t.code} value={t.code}>
-                                    {t.code} — {t.raison_sociale}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          )}
-                        />
-                      </td>
-
-                      {/* Libellé ligne */}
-                      <td className="px-1 py-1">
-                        <Input
-                          className="h-9 text-xs"
-                          placeholder="Libellé"
-                          {...register(`lignes.${i}.libelle`)}
-                        />
-                      </td>
-
-                      {/* Debit */}
-                      <td className="px-1 py-1">
-                        <Input
-                          className="h-9 text-xs text-right"
-                          type="number"
-                          min={0}
-                          placeholder="0"
-                          onDoubleClick={() => {
-                            const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
-                            const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
-                            const ecartOther = otherCredit - otherDebit;
-                            if (ecartOther > 0) {
-                              setValue(`lignes.${i}.debit`, ecartOther);
-                              setValue(`lignes.${i}.credit`, 0);
-                            }
-                          }}
-                          {...register(`lignes.${i}.debit`, {
-                            valueAsNumber: true,
-                            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                              const v = Number(e.target.value) || 0;
-                              if (v > 0) setValue(`lignes.${i}.credit`, 0);
-                            },
-                          })}
-                        />
-                      </td>
-
-                      {/* Credit */}
-                      <td className="px-1 py-1">
-                        <Input
-                          className="h-9 text-xs text-right"
-                          type="number"
-                          min={0}
-                          placeholder="0"
-                          onDoubleClick={() => {
-                            const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
-                            const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
-                            const ecartOther = otherDebit - otherCredit;
-                            if (ecartOther > 0) {
-                              setValue(`lignes.${i}.credit`, ecartOther);
-                              setValue(`lignes.${i}.debit`, 0);
-                            }
-                          }}
-                          {...register(`lignes.${i}.credit`, {
-                            valueAsNumber: true,
-                            onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
-                              const v = Number(e.target.value) || 0;
-                              if (v > 0) setValue(`lignes.${i}.debit`, 0);
-                            },
-                          })}
-                        />
-                      </td>
-
-                      {/* Supprimer */}
-                      <td className="px-1 py-1 text-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={fields.length <= 2}
-                          onClick={() => remove(i)}
-                          aria-label="Supprimer la ligne"
-                        >
-                          <Trash2 className="size-3.5 text-destructive" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {errors.lignes && !Array.isArray(errors.lignes) && (
-            <p className="text-sm text-destructive">{(errors.lignes as { message?: string }).message}</p>
+          {/* Avertissement date hors exercice */}
+          {!exerciceOk && dateWatch && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 px-3 py-2 text-sm font-bold -mt-1">
+              <AlertTriangle size={15} className="flex-none" />
+              Aucun exercice ouvert ne couvre cette date — la validation sera refusée.
+            </div>
           )}
 
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          {/* Lignes en grille */}
+          <div className="flex flex-col gap-2">
+            {/* En-tête grille */}
+            <div className="grid gap-2 px-0.5" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Compte</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Tiers</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground">Libellé ligne</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Débit</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground text-right">Crédit</div>
+              <div></div>
+            </div>
+
+            {/* Lignes */}
+            {fields.map((field, i) => {
+              const compteVal = lignesWatch[i]?.compte ?? '';
+              const estCollectif = compteVal ? estAncreCollectif(compteVal) : false;
+              const compteLibelle = compteVal
+                ? (comptes.find((c) => c.numero === compteVal)?.libelle ?? '')
+                : '';
+
+              return (
+                <div key={field.id} className="grid gap-2 items-center" style={{ gridTemplateColumns: '1.5fr 1.3fr 1.4fr 110px 110px 34px' }}>
+                  {/* Compte */}
+                  <Controller
+                    name={`lignes.${i}.compte`}
+                    control={control}
+                    render={({ field: cf }) => (
+                      <Combobox<string>
+                        value={cf.value || null}
+                        onValueChange={(v) => {
+                          cf.onChange(v ?? '');
+                          if (!v || !estAncreCollectif(v)) {
+                            setValue(`lignes.${i}.tiers`, null);
+                          }
+                        }}
+                      >
+                        <ComboboxInput
+                          className="h-[38px] text-[13px]"
+                          placeholder={compteVal ? `${compteVal}${compteLibelle ? ' — ' + compteLibelle : ''}` : 'Compte…'}
+                          showClear={!!cf.value}
+                        />
+                        <ComboboxContent>
+                          <ComboboxList>
+                            <ComboboxEmpty>Aucun compte.</ComboboxEmpty>
+                            {comptes.map((c) => (
+                              <ComboboxItem key={c.numero} value={c.numero}>
+                                <span className="font-mono text-primary mr-1">{c.numero}</span>
+                                <span>{c.libelle}</span>
+                              </ComboboxItem>
+                            ))}
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
+                    )}
+                  />
+
+                  {/* Tiers */}
+                  <Controller
+                    name={`lignes.${i}.tiers`}
+                    control={control}
+                    render={({ field: tf }) => (
+                      <Select
+                        value={tf.value ?? ''}
+                        onValueChange={(v) => tf.onChange(v || null)}
+                        disabled={!estCollectif}
+                      >
+                        <SelectTrigger
+                          className="h-[38px] text-[13px]"
+                          style={{ opacity: estCollectif ? 1 : 0.5 }}
+                        >
+                          <SelectValue placeholder={estCollectif ? 'Sélectionner…' : '—'} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">—</SelectItem>
+                          {tiers.map((t) => (
+                            <SelectItem key={t.code} value={t.code}>
+                              {t.code} — {t.raison_sociale}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+
+                  {/* Libellé ligne */}
+                  <Input
+                    className="h-[38px] text-[13px]"
+                    placeholder="Libellé"
+                    {...register(`lignes.${i}.libelle`)}
+                  />
+
+                  {/* Débit */}
+                  <Input
+                    className="h-[38px] text-[13px] text-right"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    onDoubleClick={() => {
+                      const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                      const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                      const ecartOther = otherCredit - otherDebit;
+                      if (ecartOther > 0) {
+                        setValue(`lignes.${i}.debit`, ecartOther);
+                        setValue(`lignes.${i}.credit`, 0);
+                      }
+                    }}
+                    {...register(`lignes.${i}.debit`, {
+                      valueAsNumber: true,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        const v = Number(e.target.value) || 0;
+                        if (v > 0) setValue(`lignes.${i}.credit`, 0);
+                      },
+                    })}
+                  />
+
+                  {/* Crédit */}
+                  <Input
+                    className="h-[38px] text-[13px] text-right"
+                    type="number"
+                    min={0}
+                    placeholder="0"
+                    onDoubleClick={() => {
+                      const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                      const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                      const ecartOther = otherDebit - otherCredit;
+                      if (ecartOther > 0) {
+                        setValue(`lignes.${i}.credit`, ecartOther);
+                        setValue(`lignes.${i}.debit`, 0);
+                      }
+                    }}
+                    {...register(`lignes.${i}.credit`, {
+                      valueAsNumber: true,
+                      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+                        const v = Number(e.target.value) || 0;
+                        if (v > 0) setValue(`lignes.${i}.debit`, 0);
+                      },
+                    })}
+                  />
+
+                  {/* Supprimer */}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    disabled={fields.length <= 2}
+                    onClick={() => remove(i)}
+                    aria-label="Supprimer la ligne"
+                  >
+                    <Trash2 className="size-3.5 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+
+            {errors.lignes && !Array.isArray(errors.lignes) && (
+              <p className="text-xs text-destructive">{(errors.lignes as { message?: string }).message}</p>
+            )}
+
+            {/* Ajouter une ligne */}
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className="self-start"
+              className="self-start mt-1"
               onClick={() => append(ligneVide())}
             >
               <Plus className="size-4" /> Ajouter une ligne
             </Button>
-            <p className="text-xs text-muted-foreground italic">
-              Astuce : double-cliquez sur un montant pour equilibrer
-            </p>
-          </div>
 
-          {/* Pied live : totaux */}
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/30 px-4 py-3 flex-wrap">
-            <div className="flex items-center gap-6">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">Total débit</span>
-                <span className="text-[15px] font-bold">{fmtMontant(totDebit)}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">Total crédit</span>
-                <span className="text-[15px] font-bold">{fmtMontant(totCredit)}</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10.5px] font-bold uppercase tracking-widest text-muted-foreground">Écart</span>
-                <span className={`text-[15px] font-bold ${ecart !== 0 ? 'text-destructive' : ''}`}>{fmtMontant(ecart)}</span>
-              </div>
-            </div>
-            {equilibree ? (
-              <Badge className="gap-1 bg-green-600/10 text-green-700 border-green-600/20 dark:text-green-400 dark:bg-green-600/10">
-                <CheckCircle className="size-3" /> Équilibrée
-              </Badge>
-            ) : (
-              <Badge variant="destructive" className="gap-1">
-                Déséquilibrée
-              </Badge>
-            )}
+            {/* Hint */}
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mt-0.5">
+              <BookOpen size={13} className="flex-none" />
+              Astuce : double-cliquez sur un champ montant pour équilibrer automatiquement la ligne.
+            </p>
           </div>
         </form>
 
-        <DialogFooter>
-          <Button variant="outline" size="lg" onClick={onClose}>
-            <X /> Annuler
-          </Button>
-          <Button
-            size="lg"
-            type="submit"
-            form="ecriture-form"
-            disabled={isSubmitting}
-          >
-            <Save /> {isSubmitting ? 'Enregistrement…' : 'Enregistrer en brouillon'}
-          </Button>
-          <Button
-            size="lg"
-            disabled={isSubmitting || !equilibree}
-            onClick={() => void handleSubmit((v) => submit(v, true))()}
-          >
-            <CheckCircle /> Valider
-          </Button>
-        </DialogFooter>
+        {/* Pied avec balance */}
+        <div className="border-t border-border pt-4 flex items-center justify-between flex-wrap gap-4">
+          {/* Balance à gauche */}
+          <div className="flex items-center gap-6">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground">Total débit</span>
+              <span className="text-[15px] font-bold">{fmtMontant(totDebit)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground">Total crédit</span>
+              <span className="text-[15px] font-bold">{fmtMontant(totCredit)}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground">Écart</span>
+              <span className={`text-[15px] font-bold ${ecart !== 0 ? 'text-destructive' : ''}`}>{fmtMontant(ecart)}</span>
+            </div>
+            {equilibree ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-600/15 text-green-700 dark:text-green-400 px-3 py-1.5 text-sm font-extrabold">
+                <CheckCircle size={16} /> Équilibrée
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/15 text-destructive px-3 py-1.5 text-sm font-extrabold">
+                <AlertTriangle size={16} /> Déséquilibrée
+              </span>
+            )}
+          </div>
+
+          {/* Boutons à droite */}
+          <div className="flex items-center gap-2.5">
+            <Button variant="outline" size="lg" onClick={onClose}>
+              Annuler
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              type="submit"
+              form="ecriture-form"
+              disabled={isSubmitting}
+            >
+              <Save /> {isSubmitting ? 'Enregistrement…' : 'Brouillon'}
+            </Button>
+            <Button
+              size="lg"
+              disabled={isSubmitting || !equilibree}
+              onClick={() => void handleSubmit((v) => submit(v, true))()}
+            >
+              <Check /> Valider
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -508,6 +531,9 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
 
   const compteByNum = useMemo(() => new Map(comptes.map((c) => [c.numero, c])), [comptes]);
   const tiersByCode = useMemo(() => new Map(tiers.map((t) => [t.code, t])), [tiers]);
+
+  const totDebit = ecriture.lignes.reduce((s, l) => s + l.debit, 0);
+  const totCredit = ecriture.lignes.reduce((s, l) => s + l.credit, 0);
 
   async function doAction(action: AlertAction) {
     setPending(null);
@@ -537,8 +563,8 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
   const alertMsg: Record<AlertAction, string> = {
     validate: 'Cette écriture sera validée et deviendra immuable.',
     delete: 'Ce brouillon sera définitivement supprimé. Cette action est irréversible.',
-    reverse: `L’écriture ${ecriture.ref || ecriture.id} sera extournée (toutes les lignes inversées, nouvelle écriture validée).`,
-    invalidate: `L’écriture ${ecriture.ref} sera invalidée. Cette action est réservée aux administrateurs.`,
+    reverse: `L'écriture ${ecriture.ref || ecriture.id} sera extournée (toutes les lignes inversées, nouvelle écriture validée).`,
+    invalidate: `L'écriture ${ecriture.ref} sera invalidée. Cette action est réservée aux administrateurs.`,
   };
   const alertLabel: Record<AlertAction, string> = {
     validate: 'Valider',
@@ -551,13 +577,13 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
     <>
       <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
         <DialogContent className="sm:max-w-[760px]" showCloseButton={false}>
-          <DialogHeader>
-            <div className="flex items-start gap-[13px] border-b border-border pb-[18px] -mt-1">
+          <DialogHeader className="border-b border-border pb-[18px] -mt-1">
+            <div className="flex items-start gap-[13px]">
               <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <BookText size={20} />
+                <BookOpen size={20} />
               </span>
               <div className="flex-1 min-w-0 pr-7">
-                <p className="text-[10.5px] font-bold uppercase tracking-widest text-primary mb-1">
+                <p className="text-[10.5px] font-extrabold uppercase tracking-widest text-primary mb-0.5">
                   Écriture comptable
                 </p>
                 <DialogTitle className="text-[17px] font-bold leading-tight font-mono">
@@ -569,9 +595,6 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
                   {ecriture.reversal_of_id !== null && (
                     <Badge variant="secondary">Extourne</Badge>
                   )}
-                  <span className="text-[13px] font-medium text-muted-foreground">
-                    {ecriture.date_ecriture}
-                  </span>
                 </div>
               </div>
               <Button
@@ -585,48 +608,60 @@ function ModalDetail({ ecriture, user, comptes, tiers, onClose, onEdit, onReload
             </div>
           </DialogHeader>
 
-          <p className="text-sm font-semibold text-muted-foreground -mb-2 px-0.5">{ecriture.libelle}</p>
+          <p className="text-sm font-semibold text-muted-foreground -mb-2 px-0.5">
+            {ecriture.libelle}
+          </p>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Compte</TableHead>
-                <TableHead>Tiers</TableHead>
-                <TableHead>Libellé</TableHead>
-                <TableHead className="text-right">Débit</TableHead>
-                <TableHead className="text-right">Crédit</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ecriture.lignes.map((l, idx) => {
-                const c = compteByNum.get(l.compte);
-                const t = l.tiers ? tiersByCode.get(l.tiers) : null;
-                return (
-                  <TableRow key={idx}>
-                    <TableCell>
-                      <span className="font-mono text-primary">{l.compte}</span>
-                      {c && <span className="ml-1.5 text-xs text-muted-foreground">{c.libelle}</span>}
-                    </TableCell>
-                    <TableCell>
-                      {t ? (
-                        <span className="font-semibold">{t.raison_sociale}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{l.libelle || '—'}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {l.debit > 0 ? fmtMontant(l.debit) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {l.credit > 0 ? fmtMontant(l.credit) : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Compte</TableHead>
+                  <TableHead>Tiers</TableHead>
+                  <TableHead>Libellé</TableHead>
+                  <TableHead className="text-right">Débit</TableHead>
+                  <TableHead className="text-right">Crédit</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ecriture.lignes.map((l, idx) => {
+                  const c = compteByNum.get(l.compte);
+                  const t = l.tiers ? tiersByCode.get(l.tiers) : null;
+                  return (
+                    <TableRow key={idx}>
+                      <TableCell>
+                        <span className="font-mono text-primary">{l.compte}</span>
+                        {c && <span className="ml-1.5 text-xs text-muted-foreground">{c.libelle}</span>}
+                      </TableCell>
+                      <TableCell>
+                        {t ? (
+                          <span className="font-semibold">{t.raison_sociale}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{l.libelle || '—'}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        {l.debit > 0 ? fmtMontant(l.debit) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {l.credit > 0 ? fmtMontant(l.credit) : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={3} className="font-bold">Totaux</TableCell>
+                  <TableCell className="text-right font-mono font-bold">{fmtMontant(totDebit)}</TableCell>
+                  <TableCell className="text-right font-mono font-bold">{fmtMontant(totCredit)}</TableCell>
+                </TableRow>
+              </TableFooter>
+            </Table>
+          </div>
 
+          {/* Actions selon statut */}
           <div className="flex items-center justify-between gap-3 pt-2 flex-wrap">
             <div className="flex gap-2">
               {ecriture.statut === 'brouillon' && (
@@ -725,25 +760,6 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
   const [editingEcriture, setEditingEcriture] = useState<EcritureAvecLignes | null>(null);
   const [detailEcriture, setDetailEcriture] = useState<EcritureAvecLignes | null>(null);
 
-  async function load(mId: number) {
-    setLoading(true);
-    const [eRes, cRes, jRes, tRes] = await Promise.all([
-      window.api.ecritures.list(mId),
-      window.api.comptes.list(mId),
-      window.api.journaux.list(mId),
-      window.api.tiers.list(mId),
-    ]);
-    if (eRes.success) setRows(eRes.data); else toast.error(eRes.error.message);
-    if (cRes.success) setComptes(cRes.data);
-    if (jRes.success) setJournaux(jRes.data);
-    if (tRes.success) setTiers(tRes.data);
-    setLoading(false);
-  }
-
-  async function reload() {
-    if (magasin) await load(magasin.id);
-  }
-
   // Garde anti-race : si le magasin change pendant un load, on ignore la réponse périmée
   useEffect(() => {
     if (!magasin) {
@@ -768,13 +784,27 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
     return () => { cancelled = true; };
   }, [magasin]);
 
+  async function reload() {
+    if (magasin) {
+      const eRes = await window.api.ecritures.list(magasin.id);
+      if (eRes.success) setRows(eRes.data); else toast.error(eRes.error.message);
+    }
+  }
+
   async function openDetail(item: EcritureListItem) {
     const res = await window.api.ecritures.get(item.id);
     if (!res.success) { toast.error(res.error.message); return; }
     setDetailEcriture(res.data);
   }
 
-  async function openEdit(item: EcritureListItem) {
+  async function openEdit(item: EcritureListItem | EcritureAvecLignes) {
+    // Si on passe déjà un EcritureAvecLignes depuis le détail, on l'utilise directement
+    if ('lignes' in item) {
+      setEditingEcriture(item);
+      setDetailEcriture(null);
+      setSaisieOpen(true);
+      return;
+    }
     const res = await window.api.ecritures.get(item.id);
     if (!res.success) { toast.error(res.error.message); return; }
     setEditingEcriture(res.data);
@@ -815,15 +845,14 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
 
   return (
     <div className="p-6 pb-16">
-      {/* En-tête */}
+      {/* En-tête de page */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight leading-tight flex items-center gap-2">
-            <BookText className="size-6 text-primary" /> Écritures
+          <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+            Écritures comptables
           </h1>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">
-            {rows.length} écriture{rows.length !== 1 ? 's' : ''} pour {magasin.libelle}
-            {exercice ? ` · Exercice ${exercice.libelle}` : ''}
+            Saisie manuelle en partie double &mdash; {magasin.libelle}{exercice ? `, exercice ${exercice.libelle}.` : '.'}
           </p>
         </div>
         <Button size="lg" onClick={openCreate}>
@@ -831,68 +860,78 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
         </Button>
       </div>
 
-      {/* Barre de filtres */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        {/* Segmenté Toutes / Brouillons / Validées */}
-        <div className="flex rounded-md border border-border overflow-hidden text-sm font-semibold">
-          {([['', 'Toutes', counts.all], ['brouillon', 'Brouillons', counts.brouillon], ['validee', 'Validées', counts.validee]] as [FiltreStatut, string, number][]).map(([v, lbl, n]) => (
-            <button
-              key={v}
-              onClick={() => setFiltreStatut(v)}
-              className={`px-3 py-1.5 transition-colors ${filtreStatut === v ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted text-muted-foreground'}`}
-            >
-              {lbl} <span className="opacity-60">· {n}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Filtre journal */}
-        <Select value={filtreJournal || '_all'} onValueChange={(v) => setFiltreJournal(v === '_all' ? '' : v)}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="_all">Tous les journaux</SelectItem>
-            {journaux.map((j) => (
-              <SelectItem key={j.code} value={j.code}>
-                {j.code} — {j.libelle}
-              </SelectItem>
+      {/* Barre de filtres DANS UNE CARTE */}
+      <div className="rounded-lg border border-border bg-card p-3.5 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Segment Toutes / Validées / Brouillons */}
+          <div className="inline-flex rounded-lg bg-secondary p-1 gap-0.5">
+            {([
+              ['', 'Toutes', counts.all],
+              ['validee', 'Validées', counts.validee],
+              ['brouillon', 'Brouillons', counts.brouillon],
+            ] as [FiltreStatut, string, number][]).map(([v, lbl, n]) => (
+              <button
+                key={v}
+                onClick={() => setFiltreStatut(v)}
+                className={`rounded-md px-3 py-1.5 text-sm font-bold transition-colors ${
+                  filtreStatut === v
+                    ? 'bg-card shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {lbl} <span className="opacity-60">· {n}</span>
+              </button>
             ))}
-          </SelectContent>
-        </Select>
+          </div>
 
-        {/* Recherche */}
-        <div className="relative min-w-56 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Rechercher une référence, un libellé…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+          {/* Filtre journal */}
+          <Select value={filtreJournal || '_all'} onValueChange={(v) => setFiltreJournal(v === '_all' ? '' : v)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="_all">Tous les journaux</SelectItem>
+              {journaux.map((j) => (
+                <SelectItem key={j.code} value={j.code}>
+                  {j.code} — {j.libelle}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Recherche */}
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Rechercher une référence, un libellé…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground">Chargement…</p>}
+      {loading && <p className="text-sm text-muted-foreground mb-4">Chargement…</p>}
 
-      {!loading && filtered.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border p-10 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">
-            Aucune écriture.{' '}
-            {rows.length === 0 ? 'Créez-en une nouvelle pour commencer.' : 'Essayez de modifier les filtres.'}
-          </p>
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <div className="overflow-hidden rounded-lg border border-border">
+      {/* Tableau DANS UNE CARTE */}
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {!loading && filtered.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-sm font-semibold text-muted-foreground">
+              {rows.length === 0
+                ? 'Aucune écriture. Créez-en une nouvelle pour commencer.'
+                : 'Aucune écriture ne correspond à ces filtres.'}
+            </p>
+          </div>
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Réf</TableHead>
+                <TableHead>Référence</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead>Journal</TableHead>
                 <TableHead>Libellé</TableHead>
+                <TableHead>Journal</TableHead>
                 <TableHead className="text-right">Débit</TableHead>
                 <TableHead className="text-right">Crédit</TableHead>
                 <TableHead>Statut</TableHead>
@@ -907,13 +946,15 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
                   onClick={() => void openDetail(e)}
                 >
                   <TableCell className="font-mono text-primary">
-                    {e.ref || <span className="text-muted-foreground">—</span>}
+                    {e.ref || <span className="text-muted-foreground text-sm">— brouillon —</span>}
                   </TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap">{e.date_ecriture}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{e.journal}</Badge>
+                  <TableCell className="text-muted-foreground whitespace-nowrap">
+                    {fmtDate(e.date_ecriture)}
                   </TableCell>
                   <TableCell className="max-w-[260px] truncate">{e.libelle}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{e.journal}</Badge>
+                  </TableCell>
                   <TableCell className="text-right font-mono">{fmtMontant(e.total_debit)}</TableCell>
                   <TableCell className="text-right font-mono">{fmtMontant(e.total_credit)}</TableCell>
                   <TableCell>
@@ -926,23 +967,65 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
                           <MoreHorizontal />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" style={{ minWidth: 190 }}>
                         <DropdownMenuItem onClick={() => void openDetail(e)}>
-                          <Eye /> Détail
+                          <Eye className="size-4" /> Détail
                         </DropdownMenuItem>
                         {e.statut === 'brouillon' && (
                           <DropdownMenuItem onClick={() => void openEdit(e)}>
-                            <Pencil /> Modifier
+                            <Pencil className="size-4" /> Modifier
                           </DropdownMenuItem>
                         )}
-                        {e.statut === 'brouillon' && <DropdownMenuSeparator />}
                         {e.statut === 'brouillon' && (
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => void openDetail(e)}
-                          >
-                            <Trash2 /> Supprimer
+                          <DropdownMenuItem onClick={async () => {
+                            const full = await window.api.ecritures.get(e.id);
+                            if (full.success) {
+                              const r = await window.api.ecritures.validate(e.id);
+                              if (!r.success) toast.error(r.error.message);
+                              else { toast.success('Écriture validée.'); void reload(); }
+                            }
+                          }}>
+                            <Check className="size-4" /> Valider
                           </DropdownMenuItem>
+                        )}
+                        {e.statut === 'validee' && (
+                          <DropdownMenuItem onClick={async () => {
+                            const r = await window.api.ecritures.reverse(e.id);
+                            if (!r.success) toast.error(r.error.message);
+                            else { toast.success('Extourne créée.'); void reload(); }
+                          }}>
+                            Extourner
+                          </DropdownMenuItem>
+                        )}
+                        {e.statut === 'brouillon' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={async () => {
+                                const r = await window.api.ecritures.delete(e.id);
+                                if (!r.success) toast.error(r.error.message);
+                                else { toast.success('Écriture supprimée.'); void reload(); }
+                              }}
+                            >
+                              <Trash2 className="size-4" /> Supprimer
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        {e.statut === 'validee' && user.role === 'Admin' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={async () => {
+                                const r = await window.api.ecritures.invalidate(e.id);
+                                if (!r.success) toast.error(r.error.message);
+                                else { toast.success('Écriture invalidée.'); void reload(); }
+                              }}
+                            >
+                              Invalider
+                            </DropdownMenuItem>
+                          </>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -951,8 +1034,8 @@ export function EcrituresModule({ user, magasin, exercice }: Props): React.JSX.E
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Modal saisie */}
       {saisieOpen && (
