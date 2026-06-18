@@ -1,5 +1,5 @@
 import type { Compte, CompteInput } from '../../../shared/ipc';
-import { query, execute, insertReturningId, sqlValue } from '../../db/connection';
+import { query, execute, insertReturningId, sqlValue, toBool } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { compteInputSchema, firstZodError } from '../../../shared/schemas';
 import { estAncreCollectif } from '../../../domain/compte';
@@ -16,10 +16,20 @@ function parseCompte(input: CompteInput): CompteInput {
 }
 
 export async function list(magasinId: number): Promise<Compte[]> {
-  return query<Compte>(
+  // `collectif`/`lettrable` (BOOLEAN HFSQL) sont renvoyés en nombre → on normalise.
+  const rows = await query<Record<string, unknown>>(
     `SELECT id, magasin_id, numero, libelle, classe, collectif, lettrable ` +
       `FROM comptes WHERE magasin_id = ${sqlValue(magasinId)} ORDER BY numero`,
   );
+  return rows.map((r) => ({
+    id: Number(r.id),
+    magasin_id: Number(r.magasin_id),
+    numero: String(r.numero ?? ''),
+    libelle: String(r.libelle ?? ''),
+    classe: Number(r.classe),
+    collectif: toBool(r.collectif),
+    lettrable: toBool(r.lettrable),
+  }));
 }
 
 async function numeroExiste(magasinId: number, numero: string, exceptId?: number): Promise<boolean> {

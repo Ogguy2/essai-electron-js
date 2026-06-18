@@ -1,5 +1,5 @@
 import type { Journal, JournalInput } from '../../../shared/ipc';
-import { query, execute, insertReturningId, sqlValue } from '../../db/connection';
+import { query, execute, insertReturningId, sqlValue, toBool } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { journalInputSchema, firstZodError } from '../../../shared/schemas';
 import { toAsciiUpper } from '../../../domain/text';
@@ -17,10 +17,20 @@ function parseJournal(input: JournalInput): JournalInput {
 }
 
 export async function list(magasinId: number): Promise<Journal[]> {
-  return query<Journal>(
+  // ⚠️ `type` est un mot réservé HFSQL → renvoyé en `TYPE` (majuscule) par ODBC ;
+  // `active` (BOOLEAN) est renvoyé en nombre. On normalise vers le type `Journal`.
+  const rows = await query<Record<string, unknown>>(
     `SELECT id, magasin_id, code, libelle, type, active FROM journaux ` +
       `WHERE magasin_id = ${sqlValue(magasinId)} ORDER BY code`,
   );
+  return rows.map((r) => ({
+    id: Number(r.id),
+    magasin_id: Number(r.magasin_id),
+    code: String(r.code ?? ''),
+    libelle: String(r.libelle ?? ''),
+    type: String(r.type ?? r.TYPE ?? ''),
+    active: toBool(r.active),
+  }));
 }
 
 async function codeExiste(magasinId: number, code: string, exceptId?: number): Promise<boolean> {

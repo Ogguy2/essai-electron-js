@@ -79,6 +79,15 @@ export function sqlValue(v: string | number | boolean | null | undefined): strin
 }
 
 /**
+ * Normalise un BOOLEAN HFSQL en `boolean` JS. node-odbc renvoie les BOOLEAN
+ * HFSQL en **nombre** (1/0) → à convertir avant de servir au renderer (les
+ * schémas zod attendent un vrai `boolean`).
+ */
+export function toBool(v: unknown): boolean {
+  return v === true || v === 1 || v === '1';
+}
+
+/**
  * Exécute un bloc de requêtes dans UNE transaction (connexion dédiée).
  * `run(sql)` exécute une requête sur cette connexion. Commit si tout passe,
  * rollback sinon. Indispensable : le pilote HFSQL/ODBC ne committe pas de façon
