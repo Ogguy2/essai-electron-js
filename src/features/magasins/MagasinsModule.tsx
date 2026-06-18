@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
   Plus, Save, X, Store, Building2, MoreHorizontal, Pencil, Trash2,
@@ -20,7 +22,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { AuthUser, Magasin, MagasinInput, Societe } from '@/shared/ipc';
+import { magasinInputSchema, type MagasinFormValues } from '@/shared/schemas';
+import type { AuthUser, Magasin, Societe } from '@/shared/ipc';
 
 interface Props {
   user: AuthUser;
@@ -33,11 +36,20 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   const [societes, setSocietes] = useState<Societe[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Magasin | null>(null);
-  const [form, setForm] = useState<MagasinInput>({ libelle: '', societe_id: 0 });
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Magasin | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<MagasinFormValues>({
+    resolver: zodResolver(magasinInputSchema),
+    defaultValues: { libelle: '', societe_id: 0 },
+  });
 
   const societeById = (id: number): Societe | undefined => societes.find((s) => s.id === id);
 
@@ -55,28 +67,25 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
 
   function openCreate() {
     setEditing(null);
-    setForm({ libelle: '', societe_id: societes[0]?.id ?? 0 });
-    setFormError(null);
+    reset({ libelle: '', societe_id: societes[0]?.id ?? 0 });
     setOpen(true);
   }
   function openEdit(m: Magasin) {
     setEditing(m);
-    setForm({ libelle: m.libelle, societe_id: m.societe_id });
-    setFormError(null);
+    reset({ libelle: m.libelle, societe_id: m.societe_id });
     setOpen(true);
   }
 
-  async function save() {
-    if (!form.libelle.trim()) { setFormError('Le libellé est requis.'); return; }
-    if (!form.societe_id) { setFormError('Veuillez choisir une société.'); return; }
-    setSaving(true);
+  async function onValid(values: MagasinFormValues) {
     const res = editing
-      ? await window.api.magasins.update(editing.id, form)
-      : await window.api.magasins.create(form);
-    setSaving(false);
+      ? await window.api.magasins.update(editing.id, values)
+      : await window.api.magasins.create(values);
     if (!res.success) {
-      if (res.error.code === 'VALIDATION') { setFormError(res.error.message); return; }
-      toast.error(res.error.message);
+      if (res.error.code === 'VALIDATION') {
+        setError('libelle', { message: res.error.message });
+      } else {
+        toast.error(res.error.message);
+      }
       return;
     }
     toast.success(editing ? 'Magasin modifié.' : 'Magasin créé — plan comptable initialisé (117 comptes).');
@@ -217,38 +226,53 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
             </div>
           </DialogHeader>
 
-          <div className="flex flex-col gap-[14px] pb-2 pt-1">
+          <form
+            id="magasin-form"
+            onSubmit={handleSubmit(onValid)}
+            className="flex flex-col gap-[14px] pb-2 pt-1"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="lib">Libellé du magasin</Label>
               <Input
                 id="lib"
-                value={form.libelle}
                 placeholder="ex. Siconex - Treichville"
                 autoFocus
-                onChange={(e) => { setFormError(null); setForm({ ...form, libelle: e.target.value }); }}
+                aria-invalid={errors.libelle ? 'true' : undefined}
+                {...register('libelle')}
               />
+              {errors.libelle && (
+                <p className="text-sm text-destructive">{errors.libelle.message}</p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Société de rattachement</Label>
-              <Select
-                value={form.societe_id ? String(form.societe_id) : undefined}
-                onValueChange={(v) => { setFormError(null); setForm({ ...form, societe_id: Number(v) }); }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir une société" />
-                </SelectTrigger>
-                <SelectContent>
-                  {societes.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.raison_sociale}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Controller
+                name="societe_id"
+                control={control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value ? String(field.value) : undefined}
+                    onValueChange={(v) => field.onChange(parseInt(v, 10))}
+                  >
+                    <SelectTrigger aria-invalid={errors.societe_id ? 'true' : undefined}>
+                      <SelectValue placeholder="Choisir une société" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {societes.map((s) => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.raison_sociale}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.societe_id && (
+                <p className="text-sm text-destructive">{errors.societe_id.message}</p>
+              )}
               <p className="text-[11.5px] font-semibold text-muted-foreground">
                 L'identité légale (RCCM, adresse, téléphone) du cartouche provient de cette société.
               </p>
             </div>
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-          </div>
+          </form>
 
           <DialogFooter>
             <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
@@ -256,10 +280,11 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
             </Button>
             <Button
               size="lg"
-              onClick={() => void save()}
-              disabled={saving || !form.libelle.trim() || !form.societe_id}
+              type="submit"
+              form="magasin-form"
+              disabled={isSubmitting}
             >
-              <Save /> {saving ? 'Enregistrement…' : 'Enregistrer'}
+              <Save /> {isSubmitting ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </DialogFooter>
         </DialogContent>
