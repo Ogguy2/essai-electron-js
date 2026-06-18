@@ -239,10 +239,10 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
       <div className="flex flex-col gap-3">
         {byClasse.map(([classe, comptes]) => (
           <div key={classe} className="overflow-hidden rounded-lg border border-border bg-card">
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-muted/50"
+            <Button
+              variant="ghost"
               onClick={() => toggleCollapsed(classe)}
+              className="h-auto w-full justify-start gap-2 rounded-none px-4 py-3 text-left font-normal whitespace-normal hover:bg-muted/50"
             >
               <ChevronDown
                 className={`size-4 text-muted-foreground transition-transform${collapsed[classe] ? ' -rotate-90' : ''}`}
@@ -254,7 +254,7 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
               <span className="ml-auto text-xs font-bold text-muted-foreground">
                 {comptes.length} compte{comptes.length !== 1 ? 's' : ''}
               </span>
-            </button>
+            </Button>
 
             {!collapsed[classe] && (
               <table className="w-full border-t border-border text-sm">
