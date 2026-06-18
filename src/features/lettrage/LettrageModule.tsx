@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link2, Unlink } from 'lucide-react';
+import { CheckCircle, Info, Link2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -21,6 +25,10 @@ import type { Magasin, Compte, Tiers, LigneLettrable } from '@/shared/ipc';
 
 function fmtFcfa(n: number): string {
   return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
+}
+
+function fmtFcfaShort(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
 function fmtDate(s: string): string {
@@ -103,7 +111,7 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
     [lignes],
   );
 
-  // Groupes lettrés : lignes ayant un code de lettrage, regroupees par code
+  // Groupes lettres : lignes ayant un code de lettrage, regroupees par code
   const groupesLettres = useMemo(() => {
     const map = new Map<string, LigneLettrable[]>();
     for (const l of lignes) {
@@ -126,6 +134,22 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
     return { count: selectedLignes.length, sumDebit, sumCredit, ecart, hasLettrees, selectedLignes };
   }, [lignes, selection]);
 
+  // Map tiers par code pour la colonne tiers du tableau
+  const tiersByCode = useMemo(() => {
+    const m = new Map<string, Tiers>();
+    for (const t of tiersList) m.set(t.code, t);
+    return m;
+  }, [tiersList]);
+
+  // Tiers filtres selon le compte selectionne
+  const tiersOfCompte = useMemo(() => {
+    if (selectedCompte.startsWith('4111')) return tiersList.filter((t) => t.est_client);
+    if (selectedCompte.startsWith('4011')) return tiersList.filter((t) => t.est_fournisseur);
+    return tiersList;
+  }, [selectedCompte, tiersList]);
+
+  const showTiersFilter = selectedCompte.startsWith('4111') || selectedCompte.startsWith('4011');
+
   function toggleLine(ligneId: number) {
     setSelection((prev) => {
       const next = new Set(prev);
@@ -143,6 +167,13 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
     }
   }
 
+  async function reloadLignes() {
+    if (!magasin || !selectedCompte) return;
+    const tiersArg = selectedTiers && selectedTiers !== '_all' ? selectedTiers : undefined;
+    const r = await window.api.lettrage.lignes(magasin.id, selectedCompte, tiersArg);
+    if (r.success) setLignes(r.data);
+  }
+
   async function handleLettrer() {
     if (selection.size === 0) return;
     setLettrant(true);
@@ -152,14 +183,9 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
       toast.error(res.error.message);
       return;
     }
-    toast.success(`Lettrage ${res.data} applique avec succes.`);
+    toast.success(`Lignes lettrees "${res.data}"`);
     setSelection(new Set());
-    // Recharge les lignes
-    if (magasin && selectedCompte) {
-      const tiersArg = selectedTiers && selectedTiers !== '_all' ? selectedTiers : undefined;
-      const r = await window.api.lettrage.lignes(magasin.id, selectedCompte, tiersArg);
-      if (r.success) setLignes(r.data);
-    }
+    await reloadLignes();
   }
 
   async function handleDelettrer() {
@@ -176,11 +202,7 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
     }
     toast.success('Delettrage effectue.');
     setSelection(new Set());
-    if (magasin && selectedCompte) {
-      const tiersArg = selectedTiers && selectedTiers !== '_all' ? selectedTiers : undefined;
-      const r = await window.api.lettrage.lignes(magasin.id, selectedCompte, tiersArg);
-      if (r.success) setLignes(r.data);
-    }
+    await reloadLignes();
   }
 
   if (!magasin) {
@@ -196,247 +218,371 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
   const allChecked = lignes.length > 0 && selection.size === lignes.length;
   const someChecked = selection.size > 0 && selection.size < lignes.length;
   const equilibre = selectionDetails.ecart === 0 && selectionDetails.count >= 2;
+  const lettreCount = lignes.filter((l) => l.lettrage !== null).length;
 
   return (
     <div className="p-6 pb-16">
       {/* En-tete */}
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight leading-tight flex items-center gap-2">
-            <Link2 size={24} className="text-primary" />
-            Lettrage
-          </h1>
-          <p className="mt-1 text-sm font-semibold text-muted-foreground">
-            Rapprochement des lignes de comptes — {magasin.libelle}
-          </p>
-        </div>
+      <div className="mb-5">
+        <h1 className="text-2xl font-extrabold tracking-tight leading-tight">
+          Lettrage
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Rapprochez factures et reglements sur un meme compte tiers pour solder les creances et dettes.
+        </p>
       </div>
 
-      {/* Filtres */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-80">
-          <Select value={selectedCompte} onValueChange={(v) => { setSelectedCompte(v); setSelection(new Set()); }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir un compte lettrable" />
-            </SelectTrigger>
-            <SelectContent>
-              {comptes.length === 0 && (
-                <SelectItem value="_none" disabled>Aucun compte lettrable</SelectItem>
-              )}
-              {comptes.map((c) => (
-                <SelectItem key={c.numero} value={c.numero}>
-                  {c.numero} - {c.libelle}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="w-60">
-          <Select value={selectedTiers} onValueChange={(v) => { setSelectedTiers(v); setSelection(new Set()); }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Tous les tiers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="_all">Tous les tiers</SelectItem>
-              {tiersList.map((t) => (
-                <SelectItem key={t.code} value={t.code}>
-                  {t.code} - {t.raison_sociale}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      {/* Grille 2 colonnes : tableau | panneau sticky */}
+      <div className="grid gap-4 items-start lg:grid-cols-[1fr_320px]">
 
-      {/* Panneau de selection */}
-      {selectionDetails.count > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted/30 px-4 py-3">
-          <span className="text-sm font-bold">
-            {selectionDetails.count} ligne{selectionDetails.count > 1 ? 's' : ''} selectionnee{selectionDetails.count > 1 ? 's' : ''}
-          </span>
-          <span className="text-sm tabular-nums">
-            <span className="font-semibold text-muted-foreground">Debit :</span>{' '}
-            <span className="font-bold">{fmtFcfa(selectionDetails.sumDebit)}</span>
-          </span>
-          <span className="text-sm tabular-nums">
-            <span className="font-semibold text-muted-foreground">Credit :</span>{' '}
-            <span className="font-bold">{fmtFcfa(selectionDetails.sumCredit)}</span>
-          </span>
-          <span className={`text-sm font-bold tabular-nums ${selectionDetails.ecart !== 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
-            Ecart : {fmtFcfa(Math.abs(selectionDetails.ecart))}{selectionDetails.ecart !== 0 ? '' : ' '}
-          </span>
-          {equilibre && (
-            <Badge className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 border-green-300">
-              Equilibre parfait
-            </Badge>
-          )}
-          <span className="text-xs font-semibold text-muted-foreground">
-            Prochain code : <span className="font-bold text-foreground">{prochainCode}</span>
-          </span>
-          <div className="ml-auto flex gap-2">
-            {selectionDetails.hasLettrees && (
-              <Button
-                size="lg"
-                variant="outline"
-                onClick={() => { setDelettrantGroupCode(null); setDelettrantDialogOpen(true); }}
-              >
-                <Unlink /> Delettrer
-              </Button>
-            )}
-            <Button
-              size="lg"
-              disabled={selectionDetails.count === 0 || lettrant}
-              onClick={() => void handleLettrer()}
-            >
-              <Link2 />
-              {lettrant ? 'Lettrage...' : `Lettrer "${prochainCode}"`}
-            </Button>
-          </div>
-        </div>
-      )}
+        {/* Colonne gauche */}
+        <div className="flex flex-col gap-4">
 
-      {/* Table des lignes */}
-      {loadingLignes && <p className="text-sm text-muted-foreground">Chargement...</p>}
-      {!loadingLignes && (
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="w-10 px-4 py-2.5">
-                  <Checkbox
-                    checked={allChecked}
-                    ref={(el) => {
-                      if (el) (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someChecked;
-                    }}
-                    onCheckedChange={toggleAll}
-                    aria-label="Tout selectionner"
-                  />
-                </th>
-                <th className="px-4 py-2.5 text-left font-bold">Date</th>
-                <th className="px-4 py-2.5 text-left font-bold">Reference</th>
-                <th className="px-4 py-2.5 text-left font-bold">Tiers</th>
-                <th className="px-4 py-2.5 text-left font-bold">Libelle</th>
-                <th className="px-4 py-2.5 text-right font-bold">Debit</th>
-                <th className="px-4 py-2.5 text-right font-bold">Credit</th>
-                <th className="px-4 py-2.5 text-left font-bold">Lettrage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lignes.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm font-semibold text-muted-foreground">
-                    {selectedCompte
-                      ? 'Aucune ligne lettrable sur ce compte.'
-                      : 'Selectionnez un compte lettrable.'}
-                  </td>
-                </tr>
-              )}
-              {lignes.map((l) => (
-                <tr
-                  key={l.ligne_id}
-                  className={`border-b border-border last:border-0 cursor-pointer hover:bg-muted/20 ${selection.has(l.ligne_id) ? 'bg-primary/5' : ''}`}
-                  onClick={() => toggleLine(l.ligne_id)}
+          {/* Carte filtres */}
+          <div className="rounded-lg border bg-card p-3.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <div style={{ width: 280 }}>
+                <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                  Compte a lettrer
+                </label>
+                <Select
+                  value={selectedCompte}
+                  onValueChange={(v) => {
+                    setSelectedCompte(v);
+                    setSelectedTiers('');
+                    setSelection(new Set());
+                  }}
                 >
-                  <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                    <Checkbox
-                      checked={selection.has(l.ligne_id)}
-                      onCheckedChange={() => toggleLine(l.ligne_id)}
-                      aria-label={`Selectionner ligne ${l.ligne_id}`}
-                    />
-                  </td>
-                  <td className="px-4 py-2 whitespace-nowrap text-muted-foreground">{fmtDate(l.date)}</td>
-                  <td className="px-4 py-2 font-mono text-xs font-bold text-primary">{l.ref}</td>
-                  <td className="px-4 py-2 font-medium">{l.tiers ?? '-'}</td>
-                  <td className="px-4 py-2 font-medium max-w-[200px] truncate">{l.libelle}</td>
-                  <td className="px-4 py-2 text-right tabular-nums">
-                    {l.debit ? fmtFcfa(l.debit) : '-'}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums">
-                    {l.credit ? fmtFcfa(l.credit) : '-'}
-                  </td>
-                  <td className="px-4 py-2">
-                    {l.lettrage ? (
-                      <Badge variant="outline" className="text-green-700 border-green-400 dark:text-green-400">
-                        {l.lettrage}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choisir un compte lettrable" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {comptes.length === 0 && (
+                      <SelectItem value="_none" disabled>Aucun compte lettrable</SelectItem>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                    {comptes.map((c) => (
+                      <SelectItem key={c.numero} value={c.numero}>
+                        {c.numero} — {c.libelle}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-      {/* Section groupes lettres */}
-      {groupesLettres.length > 0 && (
-        <div className="mt-6">
-          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">
-            Groupes lettres
-          </h3>
-          <div className="flex flex-col gap-2">
-            {groupesLettres.map(([code, gLignes]) => {
-              const sumD = gLignes.reduce((a, l) => a + l.debit, 0);
-              const sumC = gLignes.reduce((a, l) => a + l.credit, 0);
-              const eq = sumD - sumC;
-              return (
-                <div
-                  key={code}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-2.5"
-                >
-                  <Badge variant="outline" className="text-green-700 border-green-400 dark:text-green-400 font-bold text-sm">
-                    {code}
-                  </Badge>
-                  <span className="text-sm font-semibold">{gLignes.length} ligne{gLignes.length > 1 ? 's' : ''}</span>
-                  <span className="text-sm tabular-nums text-muted-foreground">
-                    {eq === 0 ? (
-                      <span className="text-green-600 dark:text-green-400 font-semibold">Equilibre</span>
-                    ) : (
-                      <span className="text-destructive font-semibold">
-                        Ecart : {fmtFcfa(Math.abs(eq))}
-                      </span>
-                    )}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="ml-auto"
-                    onClick={() => {
-                      setSelection(new Set(gLignes.map((l) => l.ligne_id)));
-                      setDelettrantGroupCode(code);
-                      setDelettrantDialogOpen(true);
+              {showTiersFilter && (
+                <div style={{ width: 260 }}>
+                  <label className="mb-1 block text-xs font-semibold text-muted-foreground">
+                    Tiers (optionnel)
+                  </label>
+                  <Select
+                    value={selectedTiers || '_all'}
+                    onValueChange={(v) => {
+                      setSelectedTiers(v === '_all' ? '' : v);
+                      setSelection(new Set());
                     }}
                   >
-                    <Unlink className="size-3.5" /> Delettrer
-                  </Button>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Tous les tiers" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_all">Tous les tiers</SelectItem>
+                      {tiersOfCompte.map((t) => (
+                        <SelectItem key={t.code} value={t.code}>
+                          {t.code} — {t.raison_sociale}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              );
-            })}
+              )}
+
+              {/* Legende */}
+              <div className="ml-auto flex items-center gap-4 text-xs font-bold text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block size-2.5 rounded-full bg-green-500" />
+                  Lettre
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="inline-block size-2.5 rounded-full bg-border" />
+                  Non lettre
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Carte tableau */}
+          <div className="rounded-lg border bg-card overflow-hidden">
+            {/* En-tete carte */}
+            <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="text-sm font-bold">
+                Lignes du compte{' '}
+                <span className="font-mono text-primary">{selectedCompte || '...'}</span>
+                {' '}
+                <span className="font-semibold text-muted-foreground">
+                  &middot; {lignes.length} ligne{lignes.length !== 1 ? 's' : ''},{' '}
+                  {lettreCount} lettree{lettreCount !== 1 ? 's' : ''}
+                </span>
+              </div>
+            </div>
+
+            {loadingLignes ? (
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Chargement...
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-10 px-4">
+                      <Checkbox
+                        checked={allChecked}
+                        ref={(el) => {
+                          if (el) {
+                            (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someChecked;
+                          }
+                        }}
+                        onCheckedChange={toggleAll}
+                        aria-label="Tout selectionner"
+                      />
+                    </TableHead>
+                    <TableHead className="px-4 font-bold">Date</TableHead>
+                    <TableHead className="px-4 font-bold">Piece</TableHead>
+                    <TableHead className="px-4 font-bold">Tiers</TableHead>
+                    <TableHead className="px-4 font-bold">Libelle</TableHead>
+                    <TableHead className="px-4 text-right font-bold">Debit</TableHead>
+                    <TableHead className="px-4 text-right font-bold">Credit</TableHead>
+                    <TableHead className="px-4 font-bold">Let.</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lignes.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="px-4 py-8 text-center text-sm font-semibold text-muted-foreground"
+                      >
+                        {selectedCompte
+                          ? 'Aucune ligne lettrable sur ce compte.'
+                          : 'Selectionnez un compte lettrable.'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    lignes.map((l) => {
+                      const tiersObj = l.tiers ? tiersByCode.get(l.tiers) : null;
+                      const isSelected = selection.has(l.ligne_id);
+                      return (
+                        <TableRow
+                          key={l.ligne_id}
+                          className={`cursor-pointer ${isSelected ? 'bg-primary/10 hover:bg-primary/10' : 'hover:bg-muted/20'}`}
+                          onClick={() => toggleLine(l.ligne_id)}
+                        >
+                          <TableCell
+                            className="w-10 px-4"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleLine(l.ligne_id)}
+                              aria-label={`Selectionner ligne ${l.ligne_id}`}
+                            />
+                          </TableCell>
+                          <TableCell className="px-4 text-muted-foreground whitespace-nowrap">
+                            {fmtDate(l.date)}
+                          </TableCell>
+                          <TableCell className="px-4 font-mono text-xs font-bold text-primary">
+                            {l.ref}
+                          </TableCell>
+                          <TableCell className="px-4 font-medium">
+                            {tiersObj ? tiersObj.raison_sociale : <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="px-4 font-medium max-w-[200px] truncate">
+                            {l.libelle}
+                          </TableCell>
+                          <TableCell className="px-4 text-right tabular-nums">
+                            {l.debit ? fmtFcfa(l.debit) : <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="px-4 text-right tabular-nums">
+                            {l.credit ? fmtFcfa(l.credit) : <span className="text-muted-foreground">&mdash;</span>}
+                          </TableCell>
+                          <TableCell className="px-4">
+                            {l.lettrage ? (
+                              <Badge
+                                variant="outline"
+                                className="text-green-700 border-green-400 dark:text-green-400"
+                              >
+                                {l.lettrage}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">&mdash;</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </div>
-      )}
 
-      {/* Bouton lettrer flottant si rien de selectionne */}
-      {selectionDetails.count === 0 && lignes.length > 0 && (
-        <div className="mt-4 flex justify-end">
-          <Button size="lg" disabled>
-            <Link2 />
-            Lettrer (selectionnez des lignes)
-          </Button>
+        {/* Colonne droite — sticky */}
+        <div className="flex flex-col gap-4">
+
+          {/* Carte Selection */}
+          <div className="rounded-lg border bg-card p-4 lg:sticky lg:top-4">
+            <div className="mb-3.5 text-sm font-bold">Selection</div>
+
+            {selectionDetails.count === 0 ? (
+              <p className="text-[13.5px] font-semibold leading-snug text-muted-foreground">
+                Cochez des lignes du meme compte pour calculer leur solde et les lettrer.
+              </p>
+            ) : (
+              <>
+                {/* Lignes de sommes */}
+                <div className="flex items-center justify-between py-1 text-[13.5px] font-bold">
+                  <span className="text-muted-foreground">Lignes selectionnees</span>
+                  <span className="text-[14.5px]">{selectionDetails.count}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 text-[13.5px] font-bold">
+                  <span className="text-muted-foreground">&Sigma; Debit</span>
+                  <span className="tabular-nums text-[14.5px]">{fmtFcfaShort(selectionDetails.sumDebit)}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 text-[13.5px] font-bold">
+                  <span className="text-muted-foreground">&Sigma; Credit</span>
+                  <span className="tabular-nums text-[14.5px]">{fmtFcfaShort(selectionDetails.sumCredit)}</span>
+                </div>
+                <div className="flex items-center justify-between py-1 text-[13.5px] font-bold">
+                  <span className="text-muted-foreground">Ecart</span>
+                  <span
+                    className={`tabular-nums text-[14.5px] ${selectionDetails.ecart !== 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}
+                  >
+                    {fmtFcfaShort(Math.abs(selectionDetails.ecart))}
+                  </span>
+                </div>
+
+                <Separator className="my-3" />
+
+                {/* Pastille d'etat */}
+                <div
+                  className={`flex items-center gap-2.5 rounded-[10px] px-3 py-[11px] ${equilibre ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}
+                >
+                  {equilibre
+                    ? <CheckCircle size={17} />
+                    : <Info size={17} />
+                  }
+                  <div>
+                    <div className="text-[13.5px] font-extrabold leading-tight">
+                      {equilibre ? 'Equilibre parfait' : 'Lettrage partiel'}
+                    </div>
+                    <div className="text-[12px] font-semibold leading-tight">
+                      {equilibre ? 'Statut : lettre' : 'Solde non nul — statut : partiel'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Prochain code */}
+                <div className="mt-3 text-[13px] font-bold text-muted-foreground">
+                  Prochain code :{' '}
+                  <span className="font-mono text-base font-extrabold text-primary">
+                    {prochainCode}
+                  </span>
+                </div>
+
+                {/* Boutons */}
+                <Button
+                  size="lg"
+                  className="mt-3.5 w-full cursor-pointer"
+                  disabled={selectionDetails.count === 0 || lettrant}
+                  onClick={() => void handleLettrer()}
+                >
+                  <Link2 />
+                  {lettrant ? 'Lettrage...' : `Lettrer "${prochainCode}"`}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="mt-2 w-full cursor-pointer"
+                  onClick={() => setSelection(new Set())}
+                >
+                  Reinitialiser
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Carte Groupes lettres */}
+          {groupesLettres.length > 0 && (
+            <div className="rounded-lg border bg-card overflow-hidden">
+              <div className="border-b px-4 py-3">
+                <div className="text-sm font-bold">Groupes lettres</div>
+              </div>
+              <div className="p-1.5 flex flex-col">
+                {groupesLettres.map(([code, gLignes], idx) => {
+                  const sumD = gLignes.reduce((a, l) => a + l.debit, 0);
+                  const sumC = gLignes.reduce((a, l) => a + l.credit, 0);
+                  const eq = Math.abs(sumD - sumC) < 0.005;
+                  return (
+                    <div
+                      key={code}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 ${idx > 0 ? 'border-t' : ''}`}
+                    >
+                      <Badge
+                        variant="outline"
+                        className={
+                          eq
+                            ? 'text-green-700 border-green-400 dark:text-green-400 font-bold'
+                            : 'text-amber-700 border-amber-400 dark:text-amber-400 font-bold'
+                        }
+                      >
+                        {code}
+                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-bold leading-tight">
+                          {gLignes.length} ligne{gLignes.length > 1 ? 's' : ''}{' '}
+                          &middot; {fmtFcfaShort(sumD)} FCFA
+                        </div>
+                        <div className={`text-[11.5px] font-semibold leading-tight ${eq ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                          {eq ? 'Lettre' : 'Partiel'}
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="cursor-pointer shrink-0"
+                        title="Delettrer"
+                        onClick={() => {
+                          setDelettrantGroupCode(code);
+                          setDelettrantDialogOpen(true);
+                        }}
+                      >
+                        <X className="size-3.5" />
+                        Delettrer
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* AlertDialog delettrage */}
-      <AlertDialog open={delettrantDialogOpen} onOpenChange={(o) => { setDelettrantDialogOpen(o); if (!o) setDelettrantGroupCode(null); }}>
+      <AlertDialog
+        open={delettrantDialogOpen}
+        onOpenChange={(o) => {
+          setDelettrantDialogOpen(o);
+          if (!o) setDelettrantGroupCode(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delettrer les lignes ?</AlertDialogTitle>
             <AlertDialogDescription>
               {delettrantGroupCode !== null
-                ? `Le groupe « ${delettrantGroupCode} » sera delettré (${(groupesLettres.find(([c]) => c === delettrantGroupCode)?.[1] ?? []).length} ligne(s)). Cette action est reversible.`
-                : `${selectionDetails.selectedLignes.filter((l) => l.lettrage !== null).length} ligne(s) lettrée(s) seront délettrées. Cette action est réversible (vous pourrez relettrer plus tard).`}
+                ? `Le groupe « ${delettrantGroupCode} » sera deletre (${(groupesLettres.find(([c]) => c === delettrantGroupCode)?.[1] ?? []).length} ligne(s)). Cette action est reversible.`
+                : `${selectionDetails.selectedLignes.filter((l) => l.lettrage !== null).length} ligne(s) lettree(s) seront deletrees. Cette action est reversible (vous pourrez relettrer plus tard).`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
