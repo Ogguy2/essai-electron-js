@@ -77,7 +77,16 @@ export async function tableCount(conn, table) {
 }
 
 /** Tables de DONNÉES gérées par seed/fresh (app_users est hors périmètre). */
-export const DATA_TABLES = ['comptes', 'exercices', 'magasins', 'societes'];
+export const DATA_TABLES = ['journaux', 'comptes', 'exercices', 'magasins', 'societes'];
+
+export const DEFAULT_JOURNAUX = [
+  { code: 'AN', libelle: 'A-nouveaux', type: 'OD' },
+  { code: 'VTE', libelle: 'Journal des ventes', type: 'VTE' },
+  { code: 'ACHT', libelle: 'Journal des achats', type: 'ACHT' },
+  { code: 'BANQ', libelle: 'Journal de banque', type: 'BANQ' },
+  { code: 'CAI', libelle: 'Journal de caisse', type: 'CAI' },
+  { code: 'OD', libelle: 'Operations diverses', type: 'OD' },
+];
 
 /** Sociétés de démonstration (cf. src/lib/mock-data.ts). */
 export const DEMO_SOCIETES = [
@@ -108,6 +117,12 @@ export async function seedMagasin(conn, libelle, societeId) {
     await conn.query(
       `INSERT INTO comptes (magasin_id, numero, libelle, classe, collectif, lettrable) VALUES (` +
         `${id}, ${sqlStr(c.numero)}, ${sqlStr(c.libelle)}, ${c.classe}, ${c.collectif ? 1 : 0}, ${c.lettrable ? 1 : 0})`,
+    );
+  }
+  for (const j of DEFAULT_JOURNAUX) {
+    await conn.query(
+      `INSERT INTO journaux (magasin_id, code, libelle, type, active) VALUES (` +
+        `${id}, ${sqlStr(toAsciiUpper(j.code))}, ${sqlStr(toAsciiUpper(j.libelle))}, ${sqlStr(j.type)}, 1)`,
     );
   }
   return { id, comptes: plan.length };
