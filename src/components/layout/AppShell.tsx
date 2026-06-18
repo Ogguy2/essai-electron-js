@@ -10,6 +10,7 @@ import { ComptesModule } from '@/features/comptes/ComptesModule';
 import { JournauxModule } from '@/features/journaux/JournauxModule';
 import { TiersModule } from '@/features/tiers/TiersModule';
 import { UtilisateursModule } from '@/features/utilisateurs/UtilisateursModule';
+import { ExercicesModule } from '@/features/exercices/ExercicesModule';
 import type { AuthUser, Magasin, Societe, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
@@ -76,6 +77,8 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
         return <JournauxModule user={user} magasin={magasin} />;
       case 'tiers':
         return <TiersModule user={user} magasin={magasin} />;
+      case 'exercices':
+        return <ExercicesModule user={user} magasin={magasin} />;
       case 'utilisateurs':
         return <UtilisateursModule user={user} />;
       default:
