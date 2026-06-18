@@ -135,3 +135,52 @@
     cursor: pointer;
     }
 }
+
+/* ---------------------------------------------------------------------------
+ * Style des toasts (Sonner) — repris du design de référence (docs/design) :
+ * carte neutre + accent coloré à gauche (4px) selon le type, ombre marquée,
+ * coins arrondis et texte en gras. Customisé ICI (CSS global) plutôt que dans
+ * le composant src/components/ui/sonner.tsx. Hors @layer pour primer sur les
+ * styles internes de Sonner.
+ * ------------------------------------------------------------------------- */
+.cn-toast {
+  border-radius: 12px !important;
+  border-left: 4px solid var(--primary) !important;
+  box-shadow: 0 12px 32px -12px oklch(0.28 0.02 258 / 0.45) !important;
+  padding: 13px 16px !important;
+  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  gap: 11px !important;
+}
+.cn-toast [data-icon] {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+}
+.cn-toast[data-type="success"] {
+  border-left-color: oklch(0.62 0.13 162) !important;
+}
+.cn-toast[data-type="success"] [data-icon] {
+  background: oklch(0.62 0.13 162 / 0.14);
+  color: oklch(0.5 0.13 162);
+}
+.cn-toast[data-type="error"] {
+  border-left-color: var(--destructive) !important;
+}
+.cn-toast[data-type="error"] [data-icon] {
+  background: color-mix(in oklch, var(--destructive) 14%, transparent);
+  color: var(--destructive);
+}
+.cn-toast[data-type="warning"] {
+  border-left-color: oklch(0.75 0.13 75) !important;
+}
+.cn-toast[data-type="warning"] [data-icon] {
+  background: oklch(0.75 0.13 75 / 0.16);
+  color: oklch(0.55 0.13 75);
+}
+.cn-toast[data-type="info"] {
+  border-left-color: var(--primary) !important;
+}
