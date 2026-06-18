@@ -11,7 +11,7 @@ describe('buildComptesPlan', () => {
     const rows = buildComptesPlan();
     const capital = rows.find((r) => r.numero === '101');
     expect(capital).toBeDefined();
-    expect(capital!.libelle).toBe('Capital social');
+    expect(capital!.libelle).toBe('CAPITAL SOCIAL');
     expect(capital!.classe).toBe(1);
   });
 

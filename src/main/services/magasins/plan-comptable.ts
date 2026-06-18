@@ -1,4 +1,5 @@
 import comptePlan from '../../../../docs/compte.json';
+import { toAsciiUpper } from '../../../domain/text';
 
 export interface CompteSeedRow {
   numero: string;
@@ -19,7 +20,7 @@ export function buildComptesPlan(): CompteSeedRow[] {
       const tiers = TIERS_COLLECTIFS.has(c.compte);
       rows.push({
         numero: c.compte,
-        libelle: c.libelle,
+        libelle: toAsciiUpper(c.libelle),
         classe,
         collectif: tiers,
         lettrable: tiers,

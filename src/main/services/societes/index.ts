@@ -2,15 +2,25 @@ import type { Societe, SocieteInput } from '../../../shared/ipc';
 import { query, execute, insertReturningId, sqlValue } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { societeInputSchema, firstZodError } from '../../../shared/schemas';
+import { toAsciiUpper } from '../../../domain/text';
 import { AppError } from '../common/errors';
 
 /** Service Sociétés (processus principal). Mutations réservées à l'Admin. */
 
-/** Valide la saisie via le schéma Zod partagé ; renvoie les données nettoyées. */
+/**
+ * Valide la saisie et normalise le texte humain en MAJUSCULES sans accents
+ * (stockage ASCII — cf. contrainte d'encodage HFSQL dans connection.ts).
+ */
 function parseSociete(input: SocieteInput): SocieteInput {
   const parsed = societeInputSchema.safeParse(input);
   if (!parsed.success) throw new AppError('VALIDATION', firstZodError(parsed.error));
-  return parsed.data;
+  const d = parsed.data;
+  return {
+    raison_sociale: toAsciiUpper(d.raison_sociale),
+    rccm: toAsciiUpper(d.rccm),
+    adresse: toAsciiUpper(d.adresse),
+    telephone: toAsciiUpper(d.telephone),
+  };
 }
 
 export async function list(): Promise<Societe[]> {

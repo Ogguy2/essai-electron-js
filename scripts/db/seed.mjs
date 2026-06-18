@@ -10,7 +10,7 @@
  */
 import { pathToFileURL } from 'node:url';
 import {
-  connect, sqlStr, tableCount, insertGetId, seedMagasin, buildComptesPlan,
+  connect, sqlStr, toAsciiUpper, tableCount, insertGetId, seedMagasin, buildComptesPlan,
   DEMO_SOCIETES, DEMO_MAGASINS,
 } from './lib.mjs';
 
@@ -28,7 +28,8 @@ export async function seed(conn) {
       const id = await insertGetId(
         conn,
         `INSERT INTO societes (raison_sociale, rccm, adresse, telephone) VALUES (` +
-          `${sqlStr(s.raison_sociale)}, ${sqlStr(s.rccm)}, ${sqlStr(s.adresse)}, ${sqlStr(s.telephone)})`,
+          `${sqlStr(toAsciiUpper(s.raison_sociale))}, ${sqlStr(toAsciiUpper(s.rccm))}, ` +
+          `${sqlStr(toAsciiUpper(s.adresse))}, ${sqlStr(toAsciiUpper(s.telephone))})`,
         'societes',
       );
       societeIds.push(id);

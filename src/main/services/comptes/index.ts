@@ -3,15 +3,16 @@ import { query, execute, insertReturningId, sqlValue } from '../../db/connection
 import { requireAdmin } from '../auth';
 import { compteInputSchema, firstZodError } from '../../../shared/schemas';
 import { estAncreCollectif } from '../../../domain/compte';
+import { toAsciiUpper } from '../../../domain/text';
 import { AppError } from '../common/errors';
 
 /** Service Plan comptable (processus principal). Mutations réservées à l'Admin. */
 
-/** Valide la saisie via le schéma Zod partagé ; renvoie les données nettoyées. */
+/** Valide la saisie ; l'intitulé est stocké en MAJUSCULES sans accents (ASCII). */
 function parseCompte(input: CompteInput): CompteInput {
   const parsed = compteInputSchema.safeParse(input);
   if (!parsed.success) throw new AppError('VALIDATION', firstZodError(parsed.error));
-  return parsed.data;
+  return { ...parsed.data, libelle: toAsciiUpper(parsed.data.libelle) };
 }
 
 export async function list(magasinId: number): Promise<Compte[]> {

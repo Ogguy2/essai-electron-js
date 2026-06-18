@@ -31,10 +31,17 @@ export async function connect() {
   return odbc.connect(dsn(getConfig()));
 }
 
-/** Pré-encodage utf8→latin1 (même contournement que l'app pour les accents). */
-export const enc = (s) => Buffer.from(String(s), 'utf8').toString('latin1');
-/** Littéral SQL chaîne, encodé + échappé. */
-export const sqlStr = (s) => `'${enc(s).replace(/'/g, "''")}'`;
+/** Dé-accentue → ASCII pur (même logique que src/domain/text.ts). */
+export const deaccent = (s) =>
+  String(s)
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/œ/g, 'oe').replace(/Œ/g, 'OE').replace(/æ/g, 'ae').replace(/Æ/g, 'AE')
+    .replace(/[^\x00-\x7F]/g, '');
+/** De-accent + MAJUSCULES (texte humain). */
+export const toAsciiUpper = (s) => deaccent(s).toUpperCase();
+/** Littéral SQL chaîne, dé-accentué (ASCII) + échappé. */
+export const sqlStr = (s) => `'${deaccent(s).replace(/'/g, "''")}'`;
 
 const TIERS_COLLECTIFS = new Set(['4011', '4111']);
 
@@ -46,7 +53,7 @@ export function buildComptesPlan() {
     const classe = parseInt(cls.classe, 10);
     for (const c of cls.comptes) {
       const tiers = TIERS_COLLECTIFS.has(c.compte);
-      rows.push({ numero: c.compte, libelle: c.libelle, classe, collectif: tiers, lettrable: tiers });
+      rows.push({ numero: c.compte, libelle: toAsciiUpper(c.libelle), classe, collectif: tiers, lettrable: tiers });
     }
   }
   return rows;
@@ -88,7 +95,7 @@ export const DEMO_MAGASINS = [
 export async function seedMagasin(conn, libelle, societeId) {
   const id = await insertGetId(
     conn,
-    `INSERT INTO magasins (libelle, societe_id) VALUES (${sqlStr(libelle)}, ${Number(societeId)})`,
+    `INSERT INTO magasins (libelle, societe_id) VALUES (${sqlStr(toAsciiUpper(libelle))}, ${Number(societeId)})`,
     'magasins',
   );
   const year = new Date().getFullYear();

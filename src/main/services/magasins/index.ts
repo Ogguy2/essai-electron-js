@@ -2,16 +2,17 @@ import type { Magasin, MagasinInput } from '../../../shared/ipc';
 import { query, execute, sqlValue, withTransaction } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { magasinInputSchema, firstZodError } from '../../../shared/schemas';
+import { toAsciiUpper } from '../../../domain/text';
 import { buildComptesPlan } from './plan-comptable';
 import { AppError } from '../common/errors';
 
 /** Service Magasins (processus principal). Mutations réservées à l'Admin. */
 
-/** Valide la saisie via le schéma Zod partagé ; renvoie les données nettoyées. */
+/** Valide la saisie ; le libellé est stocké en MAJUSCULES sans accents (ASCII). */
 function parseMagasin(input: MagasinInput): MagasinInput {
   const parsed = magasinInputSchema.safeParse(input);
   if (!parsed.success) throw new AppError('VALIDATION', firstZodError(parsed.error));
-  return parsed.data;
+  return { libelle: toAsciiUpper(parsed.data.libelle), societe_id: parsed.data.societe_id };
 }
 
 export async function list(): Promise<Magasin[]> {

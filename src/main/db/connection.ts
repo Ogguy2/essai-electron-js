@@ -1,6 +1,7 @@
 import * as odbc from 'odbc';
 import { buildDsn, getHfsqlConfig } from './config';
 import { logInfo, logError } from '../logger';
+import { deaccent } from '../../domain/text';
 
 /**
  * Couche d'accès données HFSQL (ODBC) — UNIQUE point de contact avec la base.
@@ -60,33 +61,21 @@ export async function query<T = unknown>(sql: string): Promise<T[]> {
 }
 
 /**
- * Contournement encodage HFSQL ⇄ node-odbc.
- *
- * node-odbc **décode en UTF-8** les octets lus, alors que HFSQL stocke les
- * chaînes en ANSI (1 octet/caractère) : un `é` (0xE9) relu est vu comme un octet
- * UTF-8 invalide → `U+FFFD` (« � »), perte irréversible. (Diagnostic empirique :
- * `scripts/probe-encoding.mjs`.)
- *
- * Parade : on pré-encode les chaînes à l'ÉCRITURE (`utf8 → latin1`) pour que les
- * OCTETS stockés soient exactement les octets UTF-8 du texte ; à la LECTURE, le
- * décodage UTF-8 de node-odbc redonne alors le texte correct. Aucun changement
- * côté lecture. L'ASCII est inchangé (hash bcrypt, identifiants, etc.).
- * Vérifié : « Réservé à Côté èùâêô » fait l'aller-retour à l'identique.
- */
-function utf8ToHfsqlBytes(s: string): string {
-  return Buffer.from(s, 'utf8').toString('latin1');
-}
-
-/**
  * Échappe une valeur pour l'inclure directement dans une instruction SQL.
- * Indispensable faute de paramètres `?` (cf. note ci-dessus). Les chaînes sont
- * pré-encodées pour le contournement d'encodage HFSQL (cf. `utf8ToHfsqlBytes`).
+ * Indispensable faute de paramètres `?` (cf. note ci-dessus).
+ *
+ * ⚠️ Encodage HFSQL/ODBC : node-odbc relit en UTF-8 des octets ANSI → les
+ * caractères accentués deviennent « � » (perte), et on ne peut pas passer les
+ * colonnes en Unicode. On **dé-accentue donc toute chaîne à l'écriture**
+ * (`deaccent`) → tout est stocké en ASCII pur, correct dans l'app ET dans le
+ * Centre de contrôle. Sans effet sur l'ASCII (statut, dates, numéros, hash…).
+ * La mise en MAJUSCULES du texte humain est faite en amont, dans les services.
  */
 export function sqlValue(v: string | number | boolean | null | undefined): string {
   if (v === null || v === undefined) return 'NULL';
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
   if (typeof v === 'boolean') return v ? '1' : '0';
-  return `'${utf8ToHfsqlBytes(String(v)).replace(/'/g, "''")}'`;
+  return `'${deaccent(String(v)).replace(/'/g, "''")}'`;
 }
 
 /**
