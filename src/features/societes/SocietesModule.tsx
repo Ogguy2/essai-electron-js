@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
   Plus, Save, X, Building2, MoreHorizontal, Pencil, Trash2, Store,
@@ -17,9 +19,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import type { AuthUser, Magasin, Societe, SocieteInput } from '@/shared/ipc';
+import { societeInputSchema, type SocieteFormValues } from '@/shared/schemas';
+import type { AuthUser, Magasin, Societe } from '@/shared/ipc';
 
-const EMPTY: SocieteInput = { raison_sociale: '', rccm: '', adresse: '', telephone: '' };
+const DEFAULT_VALUES: SocieteFormValues = { raison_sociale: '', rccm: '', adresse: '', telephone: '' };
 
 interface Props {
   user: AuthUser;
@@ -32,11 +35,19 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Societe | null>(null);
-  const [form, setForm] = useState<SocieteInput>(EMPTY);
   const [open, setOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Societe | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+    setError,
+  } = useForm<SocieteFormValues>({
+    resolver: zodResolver(societeInputSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
 
   async function load() {
     setLoading(true);
@@ -53,27 +64,25 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
 
   function openCreate() {
     setEditing(null);
-    setForm(EMPTY);
-    setFormError(null);
+    reset(DEFAULT_VALUES);
     setOpen(true);
   }
   function openEdit(s: Societe) {
     setEditing(s);
-    setForm({ raison_sociale: s.raison_sociale, rccm: s.rccm, adresse: s.adresse, telephone: s.telephone });
-    setFormError(null);
+    reset({ raison_sociale: s.raison_sociale, rccm: s.rccm, adresse: s.adresse, telephone: s.telephone });
     setOpen(true);
   }
 
-  async function save() {
-    if (!form.raison_sociale.trim()) { setFormError('La raison sociale est requise.'); return; }
-    setSaving(true);
+  async function onValid(values: SocieteFormValues) {
     const res = editing
-      ? await window.api.societes.update(editing.id, form)
-      : await window.api.societes.create(form);
-    setSaving(false);
+      ? await window.api.societes.update(editing.id, values)
+      : await window.api.societes.create(values);
     if (!res.success) {
-      if (res.error.code === 'VALIDATION') { setFormError(res.error.message); return; }
-      toast.error(res.error.message);
+      if (res.error.code === 'VALIDATION') {
+        setError('raison_sociale', { message: res.error.message });
+      } else {
+        toast.error(res.error.message);
+      }
       return;
     }
     toast.success(editing ? 'Société modifiée.' : 'Société créée.');
@@ -230,35 +239,40 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
             </div>
           </DialogHeader>
 
-          <div className="flex flex-col gap-[14px] pb-2 pt-1">
+          <form
+            id="societe-form"
+            onSubmit={handleSubmit(onValid)}
+            className="flex flex-col gap-[14px] pb-2 pt-1"
+          >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="rs">Raison sociale</Label>
               <Input
                 id="rs"
-                value={form.raison_sociale}
                 placeholder="ex. SICONEX SARL"
                 autoFocus
-                onChange={(e) => { setFormError(null); setForm({ ...form, raison_sociale: e.target.value }); }}
+                aria-invalid={errors.raison_sociale ? 'true' : undefined}
+                {...register('raison_sociale')}
               />
+              {errors.raison_sociale && (
+                <p className="text-sm text-destructive">{errors.raison_sociale.message}</p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-[14px]">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="rccm">RCCM</Label>
                 <Input
                   id="rccm"
-                  value={form.rccm}
                   placeholder="CI-ABJ-…"
                   className="font-mono"
-                  onChange={(e) => { setFormError(null); setForm({ ...form, rccm: e.target.value }); }}
+                  {...register('rccm')}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="tel">Téléphone</Label>
                 <Input
                   id="tel"
-                  value={form.telephone}
                   placeholder="+225 …"
-                  onChange={(e) => { setFormError(null); setForm({ ...form, telephone: e.target.value }); }}
+                  {...register('telephone')}
                 />
               </div>
             </div>
@@ -266,13 +280,11 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
               <Label htmlFor="adr">Adresse</Label>
               <Input
                 id="adr"
-                value={form.adresse}
                 placeholder="Quartier, ville"
-                onChange={(e) => { setFormError(null); setForm({ ...form, adresse: e.target.value }); }}
+                {...register('adresse')}
               />
             </div>
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
-          </div>
+          </form>
 
           <DialogFooter>
             <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
@@ -280,10 +292,11 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
             </Button>
             <Button
               size="lg"
-              onClick={() => void save()}
-              disabled={saving || !form.raison_sociale.trim()}
+              type="submit"
+              form="societe-form"
+              disabled={isSubmitting}
             >
-              <Save /> {saving ? 'Enregistrement…' : 'Enregistrer'}
+              <Save /> {isSubmitting ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </DialogFooter>
         </DialogContent>
