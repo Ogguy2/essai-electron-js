@@ -90,7 +90,19 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, [magasin]); // load est stable (définie dans le composant, pas dans deps)
+  // Chargement sur changement de magasin, avec garde anti-race : si l'utilisateur
+  // change de magasin pendant un list() lent, on ignore la réponse périmée.
+  useEffect(() => {
+    if (!magasin) { setRows([]); return; }
+    let cancelled = false;
+    setLoading(true);
+    void window.api.comptes.list(magasin.id).then((res) => {
+      if (cancelled) return;
+      if (res.success) setRows(res.data); else toast.error(res.error.message);
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [magasin]);
 
   const filtered = useMemo(
     () =>
