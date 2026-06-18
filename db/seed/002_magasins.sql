@@ -1,0 +1,22 @@
+-- =====================================================================
+-- seed/002 — Magasins de démo
+-- À exécuter dans le Centre de contrôle HFSQL (base : sicocompte).
+-- =====================================================================
+--
+-- ⚠️  NE PAS exécuter ce fichier tel quel en production.
+--
+-- Un magasin créé directement par INSERT SQL n'aura PAS son plan
+-- comptable SYSCOHADA — celui-ci est inséré automatiquement par
+-- l'application au moment de la création via Administration → Magasins.
+-- Un magasin sans plan comptable est inutilisable dans SicoCompte.
+--
+-- RECOMMANDATION : créer les magasins via l'interface de l'application.
+-- Ce fichier est conservé uniquement à titre de référence documentaire
+-- (valeurs utilisées dans src/lib/mock-data.ts).
+--
+-- Données de référence (NE PAS exécuter) :
+--
+-- INSERT INTO magasins (id, libelle, societe_id) VALUES (1, 'Siconex - Marcory', 1);
+-- INSERT INTO magasins (id, libelle, societe_id) VALUES (2, 'Siconex - Ena',     1);
+--
+-- =====================================================================
