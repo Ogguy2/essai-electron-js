@@ -5,7 +5,7 @@
 -- =====================================================================
 
 CREATE TABLE app_users (
-  id            INT,
+  id            INT AUTO_INCREMENT,
   username      VARCHAR(50),
   password_hash VARCHAR(100),
   name          VARCHAR(100),
@@ -17,8 +17,9 @@ CREATE TABLE app_users (
 
 -- Comptes initiaux — mot de passe « password » (haché en bcrypt).
 -- admin → rôle Admin ; user → rôle Comptable.
-INSERT INTO app_users (id, username, password_hash, name, email, role, active)
-VALUES (1, 'admin', '$2b$10$7ZRlrlAYTSqevXxTK6WWVedSB8cncAi41SszRLOHI9CywcQVcCok.', 'Administrateur', '', 'Admin', 1);
+-- `id` omis volontairement : laissé à l'auto-incrément HFSQL (admin=1, user=2).
+INSERT INTO app_users (username, password_hash, name, email, role, active)
+VALUES ('admin', '$2b$10$7ZRlrlAYTSqevXxTK6WWVedSB8cncAi41SszRLOHI9CywcQVcCok.', 'Administrateur', '', 'Admin', 1);
 
-INSERT INTO app_users (id, username, password_hash, name, email, role, active)
-VALUES (2, 'user', '$2b$10$t47BrVosppFxNSAUsTuA8O2tUfmYxWaL5Z.RRVEng8I/xMf2R4mie', 'Comptable', '', 'Comptable', 1);
+INSERT INTO app_users (username, password_hash, name, email, role, active)
+VALUES ('user', '$2b$10$t47BrVosppFxNSAUsTuA8O2tUfmYxWaL5Z.RRVEng8I/xMf2R4mie', 'Comptable', '', 'Comptable', 1);

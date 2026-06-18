@@ -6,7 +6,7 @@
 -- =====================================================================
 
 CREATE TABLE societes (
-  id             INT,
+  id             INT AUTO_INCREMENT,
   raison_sociale VARCHAR(150),
   rccm           VARCHAR(50),
   adresse        VARCHAR(200),
@@ -15,14 +15,14 @@ CREATE TABLE societes (
 );
 
 CREATE TABLE magasins (
-  id         INT,
+  id         INT AUTO_INCREMENT,
   libelle    VARCHAR(100),
   societe_id INT,
   PRIMARY KEY (id)
 );
 
 CREATE TABLE exercices (
-  id         INT,
+  id         INT AUTO_INCREMENT,
   magasin_id INT,
   libelle    VARCHAR(50),
   date_debut VARCHAR(10),

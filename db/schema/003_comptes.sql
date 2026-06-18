@@ -6,7 +6,7 @@
 -- =====================================================================
 
 CREATE TABLE comptes (
-  id         INT,
+  id         INT AUTO_INCREMENT,
   magasin_id INT,
   numero     VARCHAR(8),
   libelle    VARCHAR(150),
