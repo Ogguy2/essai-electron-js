@@ -256,9 +256,9 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                 <tr>
                   <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 180 }}>Compte</th>
                   <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 160 }}>Tiers</th>
-                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 140 }}>Libellé</th>
-                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Débit</th>
-                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Crédit</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ minWidth: 140 }}>Libelle</th>
+                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Debit</th>
+                  <th className="px-2 py-2 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground" style={{ width: 110 }}>Credit</th>
                   <th className="px-2 py-2" style={{ width: 36 }}></th>
                 </tr>
               </thead>
@@ -345,13 +345,22 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                         />
                       </td>
 
-                      {/* Débit */}
+                      {/* Debit */}
                       <td className="px-1 py-1">
                         <Input
                           className="h-9 text-xs text-right"
                           type="number"
                           min={0}
                           placeholder="0"
+                          onDoubleClick={() => {
+                            const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                            const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                            const ecartOther = otherCredit - otherDebit;
+                            if (ecartOther > 0) {
+                              setValue(`lignes.${i}.debit`, ecartOther);
+                              setValue(`lignes.${i}.credit`, 0);
+                            }
+                          }}
                           {...register(`lignes.${i}.debit`, {
                             valueAsNumber: true,
                             onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -362,13 +371,22 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
                         />
                       </td>
 
-                      {/* Crédit */}
+                      {/* Credit */}
                       <td className="px-1 py-1">
                         <Input
                           className="h-9 text-xs text-right"
                           type="number"
                           min={0}
                           placeholder="0"
+                          onDoubleClick={() => {
+                            const otherDebit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.debit) || 0), 0);
+                            const otherCredit = lignesWatch.reduce((s, l, idx2) => idx2 === i ? s : s + (Number(l.credit) || 0), 0);
+                            const ecartOther = otherDebit - otherCredit;
+                            if (ecartOther > 0) {
+                              setValue(`lignes.${i}.credit`, ecartOther);
+                              setValue(`lignes.${i}.debit`, 0);
+                            }
+                          }}
                           {...register(`lignes.${i}.credit`, {
                             valueAsNumber: true,
                             onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -403,15 +421,20 @@ function ModalSaisie({ magasin, exercice, editing, comptes, journaux, tiers, onC
             <p className="text-sm text-destructive">{(errors.lignes as { message?: string }).message}</p>
           )}
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="self-start"
-            onClick={() => append(ligneVide())}
-          >
-            <Plus className="size-4" /> Ajouter une ligne
-          </Button>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="self-start"
+              onClick={() => append(ligneVide())}
+            >
+              <Plus className="size-4" /> Ajouter une ligne
+            </Button>
+            <p className="text-xs text-muted-foreground italic">
+              Astuce : double-cliquez sur un montant pour equilibrer
+            </p>
+          </div>
 
           {/* Pied live : totaux */}
           <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/30 px-4 py-3 flex-wrap">
