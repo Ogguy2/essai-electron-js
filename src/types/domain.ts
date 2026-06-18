@@ -170,3 +170,8 @@ export interface LigneLettrable {
   debit: number; credit: number;
   lettrage: string | null;
 }
+
+export interface CaMensuel {
+  mois: string;
+  montant: number;
+}

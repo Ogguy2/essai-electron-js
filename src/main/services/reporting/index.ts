@@ -2,7 +2,7 @@
  * Service reporting — balance, grand livre, compte de résultat, échéancier, consolidation.
  * Pas de JOIN SQL (incertain sous HFSQL) : jointure en JS.
  */
-import type { Mouvement, LigneBalance, MouvementGL, Resultat, LigneEcheance } from '../../../shared/ipc';
+import type { Mouvement, LigneBalance, MouvementGL, Resultat, LigneEcheance, CaMensuel } from '../../../shared/ipc';
 import { query, sqlValue } from '../../db/connection';
 import { requireAuth } from '../auth';
 import {
@@ -174,6 +174,28 @@ export async function getEcheancier(
       echeance,
       anteriorite,
     });
+  }
+  return result;
+}
+
+export async function getCaParMois(magasinId: number): Promise<CaMensuel[]> {
+  requireAuth();
+  const year = new Date().getFullYear();
+  const mvts = await mouvements([magasinId]);
+  // Filtre classe 7 (produits) uniquement
+  const classe7 = mvts.filter((m) => m.classe === 7);
+  // Regroupe par mois 'AAAA-MM'
+  const map = new Map<string, number>();
+  for (const m of classe7) {
+    const mois = m.date.slice(0, 7);
+    if (!mois.startsWith(String(year))) continue;
+    map.set(mois, (map.get(mois) ?? 0) + (m.credit - m.debit));
+  }
+  // Produit 12 mois de l'annee courante, 0 si vide
+  const result: CaMensuel[] = [];
+  for (let i = 1; i <= 12; i++) {
+    const mois = `${year}-${String(i).padStart(2, '0')}`;
+    result.push({ mois, montant: map.get(mois) ?? 0 });
   }
   return result;
 }

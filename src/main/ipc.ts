@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput, type EcritureListItem, type EcritureAvecLignes, type EcritureInput, type LigneBalance, type MouvementGL, type Resultat, type LigneEcheance, type LigneLettrable } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput, type EcritureListItem, type EcritureAvecLignes, type EcritureInput, type LigneBalance, type MouvementGL, type Resultat, type LigneEcheance, type LigneLettrable, type CaMensuel } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
 import * as tiers from './services/tiers';
@@ -164,6 +164,8 @@ export function registerIpcHandlers(): void {
     wrap<Resultat>(() => reporting.getResultat(magasinId), 'reporting:resultat'));
   ipcMain.handle(IPC.reportingEcheancier, (_e, magasinId: number) =>
     wrap<LigneEcheance[]>(() => reporting.getEcheancier(magasinId), 'reporting:echeancier'));
+  ipcMain.handle(IPC.reportingCaMensuel, (_e, magasinId: number) =>
+    wrap<CaMensuel[]>(() => reporting.getCaParMois(magasinId), 'reporting:ca-mensuel'));
 
   // Consolidation
   ipcMain.handle(IPC.consolidationBalance, (_e, societeId: number, dateDebut: string, dateFin: string) =>

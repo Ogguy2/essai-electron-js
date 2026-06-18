@@ -77,6 +77,7 @@ const api: Api = {
     grandLivre: (magasinId, filtre) => ipcRenderer.invoke(IPC.reportingGrandLivre, magasinId, filtre),
     resultat: (magasinId) => ipcRenderer.invoke(IPC.reportingResultat, magasinId),
     echeancier: (magasinId) => ipcRenderer.invoke(IPC.reportingEcheancier, magasinId),
+    caMensuel: (magasinId) => ipcRenderer.invoke(IPC.reportingCaMensuel, magasinId),
   },
   consolidation: {
     balance: (societeId, dateDebut, dateFin) => ipcRenderer.invoke(IPC.consolidationBalance, societeId, dateDebut, dateFin),

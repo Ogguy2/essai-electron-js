@@ -48,6 +48,7 @@ export type {
   Resultat,
   LigneEcheance,
   LigneLettrable,
+  CaMensuel,
 } from '../types/domain';
 
 // --- Imports locaux pour construire IPC et Api ---
@@ -78,6 +79,7 @@ import type {
   Resultat,
   LigneEcheance,
   LigneLettrable,
+  CaMensuel,
 } from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
@@ -131,6 +133,7 @@ export const IPC = {
   reportingGrandLivre: 'reporting:grand-livre',
   reportingResultat: 'reporting:resultat',
   reportingEcheancier: 'reporting:echeancier',
+  reportingCaMensuel: 'reporting:ca-mensuel',
   consolidationBalance: 'consolidation:balance',
   consolidationResultat: 'consolidation:resultat',
   lettrageListeLignes: 'lettrage:lignes',
@@ -213,6 +216,7 @@ export interface Api {
     grandLivre(magasinId: number, filtre: { compte?: string; tiers?: string }): Promise<IpcResult<MouvementGL[]>>;
     resultat(magasinId: number): Promise<IpcResult<Resultat>>;
     echeancier(magasinId: number): Promise<IpcResult<LigneEcheance[]>>;
+    caMensuel(magasinId: number): Promise<IpcResult<CaMensuel[]>>;
   };
   consolidation: {
     balance(societeId: number, dateDebut: string, dateFin: string): Promise<IpcResult<LigneBalance[]>>;
