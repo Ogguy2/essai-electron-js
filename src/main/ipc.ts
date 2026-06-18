@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput } from '../shared/ipc';
+import * as comptes from './services/comptes';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
@@ -84,4 +85,13 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.exercicesList, (_e, magasinId: number) =>
     wrap<Exercice[]>(() => exercices.list(magasinId), 'exercices:list'));
+
+  ipcMain.handle(IPC.comptesList, (_e, magasinId: number) =>
+    wrap<Compte[]>(() => comptes.list(magasinId), 'comptes:list'));
+  ipcMain.handle(IPC.comptesCreate, (_e, magasinId: number, input: CompteInput) =>
+    wrap<Compte>(() => comptes.create(magasinId, input), 'comptes:create'));
+  ipcMain.handle(IPC.comptesUpdate, (_e, id: number, input: CompteInput) =>
+    wrap<Compte>(() => comptes.update(id, input), 'comptes:update'));
+  ipcMain.handle(IPC.comptesDelete, (_e, id: number) =>
+    wrap<null>(async () => { await comptes.remove(id); return null; }, 'comptes:delete'));
 }
