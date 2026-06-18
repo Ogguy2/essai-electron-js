@@ -4,6 +4,17 @@
     "es6": true,
     "node": true
   },
+  "ignorePatterns": [
+    "dist",
+    ".vite",
+    "out",
+    "docs",
+    "node_modules",
+    "*.config.ts",
+    "*.config.mts",
+    "*.config.js",
+    "*.config.mjs"
+  ],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
