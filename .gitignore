@@ -87,6 +87,13 @@ typings/
 
 # Vite
 .vite/
+# Fichiers temporaires de chargement de config Vite (.mts/.ts -> .mjs)
+*.timestamp-*.mjs
 
 # Electron-Forge
 out/
+
+# Pack driver ODBC HFSQL (~75 Mo) — NON versionné (alourdirait l'historique Git).
+# Doit être présent localement dans docs/ pour builder l'installeur (npm run make:nsis).
+# Le récupérer auprès de PC SOFT / de l'équipe et le placer ici manuellement.
+docs/ODBC25PACK090f.exe

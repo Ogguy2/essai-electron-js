@@ -1,0 +1,33 @@
+# Config electron-builder — UNIQUEMENT pour produire l'installeur NSIS.
+# Le build de l'app (Vite main/preload/renderer, fuses, ASAR, natif odbc dépaqueté)
+# reste géré par Electron Forge. On applique electron-builder en mode `--prepackaged`
+# sur le dossier déjà packagé par Forge (out/SicoCompte-win32-x64), donc il ne
+# rebuild ni ne re-signe rien — il emballe juste en installeur Windows classique.
+appId: com.siconex.sicocompte
+productName: SicoCompte
+copyright: © Siconex
+
+directories:
+  # Où déposer l'installeur généré
+  output: out/installer
+
+win:
+  target:
+    - nsis
+
+nsis:
+  # oneClick:false → vrai assistant (Bienvenue → Dossier → Installation → Terminer)
+  oneClick: false
+  # Laisse l'utilisateur choisir le dossier d'installation
+  allowToChangeInstallationDirectory: true
+  # Installation pour toute la machine (Program Files) ; demande l'élévation admin.
+  # Passe à false pour une install par-utilisateur sans admin.
+  perMachine: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SicoCompte
+  # Langue de l'assistant
+  installerLanguages:
+    - fr_FR
+  # Affiche l'écran de progression de désinstallation
+  deleteAppDataOnUninstall: false
