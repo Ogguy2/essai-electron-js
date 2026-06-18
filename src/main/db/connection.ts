@@ -60,14 +60,33 @@ export async function query<T = unknown>(sql: string): Promise<T[]> {
 }
 
 /**
+ * Contournement encodage HFSQL ⇄ node-odbc.
+ *
+ * node-odbc **décode en UTF-8** les octets lus, alors que HFSQL stocke les
+ * chaînes en ANSI (1 octet/caractère) : un `é` (0xE9) relu est vu comme un octet
+ * UTF-8 invalide → `U+FFFD` (« � »), perte irréversible. (Diagnostic empirique :
+ * `scripts/probe-encoding.mjs`.)
+ *
+ * Parade : on pré-encode les chaînes à l'ÉCRITURE (`utf8 → latin1`) pour que les
+ * OCTETS stockés soient exactement les octets UTF-8 du texte ; à la LECTURE, le
+ * décodage UTF-8 de node-odbc redonne alors le texte correct. Aucun changement
+ * côté lecture. L'ASCII est inchangé (hash bcrypt, identifiants, etc.).
+ * Vérifié : « Réservé à Côté èùâêô » fait l'aller-retour à l'identique.
+ */
+function utf8ToHfsqlBytes(s: string): string {
+  return Buffer.from(s, 'utf8').toString('latin1');
+}
+
+/**
  * Échappe une valeur pour l'inclure directement dans une instruction SQL.
- * Indispensable faute de paramètres `?` (cf. note ci-dessus).
+ * Indispensable faute de paramètres `?` (cf. note ci-dessus). Les chaînes sont
+ * pré-encodées pour le contournement d'encodage HFSQL (cf. `utf8ToHfsqlBytes`).
  */
 export function sqlValue(v: string | number | boolean | null | undefined): string {
   if (v === null || v === undefined) return 'NULL';
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
   if (typeof v === 'boolean') return v ? '1' : '0';
-  return `'${String(v).replace(/'/g, "''")}'`;
+  return `'${utf8ToHfsqlBytes(String(v)).replace(/'/g, "''")}'`;
 }
 
 /**
