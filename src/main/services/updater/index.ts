@@ -1,7 +1,7 @@
 import type { BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { IPC, type UpdateReadyPayload } from '../../shared/ipc';
-import { logError } from '../logger';
+import { IPC, type UpdateReadyPayload } from '../../../shared/ipc';
+import { logError } from '../../logger';
 
 /**
  * Service de mise à jour automatique (processus principal uniquement).

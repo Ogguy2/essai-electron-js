@@ -1,4 +1,4 @@
-import { query, sqlValue } from '../db/connection';
+import { query, sqlValue } from '../../db/connection';
 
 /**
  * Accès en lecture à la table `app_users` (HFSQL).

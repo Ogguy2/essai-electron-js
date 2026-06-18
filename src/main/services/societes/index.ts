@@ -1,8 +1,8 @@
-import type { Societe, SocieteInput } from '../../shared/ipc';
-import { query, execute, nextId, sqlValue } from '../db/connection';
-import { requireAdmin } from './auth';
-import { validateSocieteInput } from './validation';
-import { AppError } from './errors';
+import type { Societe, SocieteInput } from '../../../shared/ipc';
+import { query, execute, nextId, sqlValue } from '../../db/connection';
+import { requireAdmin } from '../auth';
+import { validateSocieteInput } from '../common/validation';
+import { AppError } from '../common/errors';
 
 /** Service Sociétés (processus principal). Mutations réservées à l'Admin. */
 

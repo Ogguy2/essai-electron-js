@@ -1,5 +1,5 @@
-import type { Exercice } from '../../shared/ipc';
-import { query, sqlValue } from '../db/connection';
+import type { Exercice } from '../../../shared/ipc';
+import { query, sqlValue } from '../../db/connection';
 
 /** Service Exercices (lecture). La clôture est gérée par le futur module Exercices. */
 export async function list(magasinId: number): Promise<Exercice[]> {

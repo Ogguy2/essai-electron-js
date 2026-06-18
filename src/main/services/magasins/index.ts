@@ -1,9 +1,9 @@
-import type { Magasin, MagasinInput } from '../../shared/ipc';
-import { query, execute, nextId, sqlValue, withTransaction } from '../db/connection';
-import { requireAdmin } from './auth';
-import { validateMagasinInput } from './validation';
+import type { Magasin, MagasinInput } from '../../../shared/ipc';
+import { query, execute, nextId, sqlValue, withTransaction } from '../../db/connection';
+import { requireAdmin } from '../auth';
+import { validateMagasinInput } from '../common/validation';
 import { buildComptesPlan } from './plan-comptable';
-import { AppError } from './errors';
+import { AppError } from '../common/errors';
 
 /** Service Magasins (processus principal). Mutations réservées à l'Admin. */
 

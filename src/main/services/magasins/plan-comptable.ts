@@ -1,4 +1,4 @@
-import comptePlan from '../../../docs/compte.json';
+import comptePlan from '../../../../docs/compte.json';
 
 export interface CompteSeedRow {
   numero: string;

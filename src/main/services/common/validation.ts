@@ -1,4 +1,4 @@
-import type { SocieteInput, MagasinInput } from '../../shared/ipc';
+import type { SocieteInput, MagasinInput } from '../../../shared/ipc';
 
 /** Renvoie un message d'erreur, ou null si valide. */
 export function validateSocieteInput(input: SocieteInput): string | null {

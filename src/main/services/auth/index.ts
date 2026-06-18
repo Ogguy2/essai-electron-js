@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
-import type { AuthUser, Role } from '../../shared/ipc';
+import type { AuthUser, Role } from '../../../shared/ipc';
 import { findByUsername } from './user-store';
-import { AppError } from './errors';
+import { AppError } from '../common/errors';
 
 /**
  * Service d'authentification (processus principal uniquement).
