@@ -14,7 +14,11 @@
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:status": "node scripts/db/status.mjs",
+    "db:seed": "node scripts/db/seed.mjs",
+    "db:fresh": "node scripts/db/fresh.mjs",
+    "db:help": "node scripts/db/help.mjs"
   },
   "keywords": [],
   "author": {
