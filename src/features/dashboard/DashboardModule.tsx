@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { LayoutDashboard, TrendingUp, TrendingDown, Landmark, ShoppingCart, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, TrendingDown, Landmark, ShoppingCart, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
-import type { Magasin, Resultat, LigneBalance, EcritureListItem } from '@/shared/ipc';
+import type { Magasin, Resultat, LigneBalance, EcritureListItem, LigneEcheance, CaMensuel } from '@/shared/ipc';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,6 +23,16 @@ function soldeParNumero(balance: LigneBalance[], prefix: string): number {
     .filter((l) => l.numero.startsWith(prefix))
     .reduce((acc, l) => acc + l.solde_debiteur - l.solde_crediteur, 0);
 }
+
+const MOIS_COURTS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+
+const ANTERIORITE_LABELS: Record<string, string> = {
+  non_echu: 'Non échu',
+  '0_30': '0–30 j',
+  '31_60': '31–60 j',
+  '61_90': '61–90 j',
+  plus_90: '+90 j',
+};
 
 // ---------------------------------------------------------------------------
 // Composant KPI
@@ -54,6 +64,135 @@ function Kpi({ label, value, icon, colorClass = 'text-primary', subtitle }: KpiP
 }
 
 // ---------------------------------------------------------------------------
+// Graphique CA mensuel
+// ---------------------------------------------------------------------------
+
+interface CaChartProps {
+  data: CaMensuel[];
+}
+
+function CaChart({ data }: CaChartProps): React.JSX.Element {
+  const max = Math.max(...data.map((d) => d.montant), 1);
+  return (
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="border-b border-border bg-muted/30 px-4 py-2.5 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
+            Chiffre d'affaires mensuel
+          </h2>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">Produits validés — classe 7</p>
+        </div>
+        <Badge variant="outline" className="text-primary border-primary/40">FCFA</Badge>
+      </div>
+      <div className="p-4">
+        <div className="flex items-end gap-2 h-44">
+          {data.map((d) => {
+            const hauteur = Math.max((d.montant / max) * 100, d.montant > 0 ? 3 : 0);
+            const moisIdx = parseInt(d.mois.slice(5, 7), 10) - 1;
+            const label = MOIS_COURTS[moisIdx] ?? d.mois.slice(5, 7);
+            const kVal = d.montant >= 1000 ? Math.round(d.montant / 1000) + 'k' : '';
+            return (
+              <div key={d.mois} className="flex-1 flex flex-col items-center gap-1 h-full">
+                <div className="flex-1 w-full flex flex-col justify-end items-center relative">
+                  {d.montant > 0 && (
+                    <span className="text-[10px] font-bold text-muted-foreground mb-1 font-mono whitespace-nowrap">
+                      {kVal}
+                    </span>
+                  )}
+                  <div
+                    className="w-full max-w-[40px] rounded-t-sm transition-all"
+                    style={{
+                      height: `${hauteur}%`,
+                      background: 'linear-gradient(180deg, var(--primary), oklch(0.72 0.085 248))',
+                      minHeight: d.montant > 0 ? '3px' : '0',
+                    }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-muted-foreground">{label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Echéances à venir
+// ---------------------------------------------------------------------------
+
+interface EcheancesProps {
+  echeances: LigneEcheance[];
+}
+
+function EcheancesSection({ echeances }: EcheancesProps): React.JSX.Element {
+  // Trie : en retard d'abord (plus_90, 61_90, 31_60, 0_30), puis non_echu
+  const ordre: Record<string, number> = { plus_90: 0, '61_90': 1, '31_60': 2, '0_30': 3, non_echu: 4 };
+  const sorted = [...echeances].sort((a, b) => (ordre[a.anteriorite] ?? 5) - (ordre[b.anteriorite] ?? 5));
+  const enRetard = echeances.filter((e) => e.anteriorite !== 'non_echu').reduce((s, e) => s + e.montant, 0);
+  const top5 = sorted.slice(0, 5);
+
+  function anterioriteVariant(a: LigneEcheance['anteriorite']): 'secondary' | 'outline' | 'destructive' {
+    if (a === 'non_echu') return 'secondary';
+    if (a === 'plus_90') return 'destructive';
+    return 'outline';
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="border-b border-border bg-muted/30 px-4 py-2.5 flex items-center justify-between">
+        <div>
+          <h2 className="text-sm font-extrabold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+            <Clock size={13} />
+            Echéances
+          </h2>
+          <p className="text-xs font-semibold text-muted-foreground mt-0.5">
+            {echeances.length} ligne{echeances.length !== 1 ? 's' : ''} non lettrée{echeances.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        {enRetard > 0 && (
+          <Badge variant="destructive" className="text-xs">
+            {fmtFcfa(enRetard)} en retard
+          </Badge>
+        )}
+      </div>
+      {top5.length === 0 ? (
+        <p className="px-4 py-6 text-center text-sm font-semibold text-muted-foreground">Aucune échéance.</p>
+      ) : (
+        <div>
+          {top5.map((e) => {
+            const retard = e.anteriorite !== 'non_echu';
+            return (
+              <div key={e.ligne_id} className="flex items-center gap-3 px-4 py-2.5 border-b border-border last:border-0 hover:bg-muted/20">
+                <div
+                  className="w-8 h-8 rounded-full flex-none flex items-center justify-center text-white text-xs font-extrabold"
+                  style={{ background: retard ? 'var(--destructive)' : 'var(--primary)' }}
+                >
+                  {e.tiers ? e.tiers.slice(0, 1).toUpperCase() : '?'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold truncate">{e.tiers ?? '—'}</div>
+                  <div className="text-xs font-semibold text-muted-foreground">
+                    {e.ref} · échéance {fmtDate(e.echeance)}
+                  </div>
+                </div>
+                <div className="text-right flex-none">
+                  <div className="text-sm font-bold tabular-nums">{fmtFcfa(e.montant)}</div>
+                  <Badge variant={anterioriteVariant(e.anteriorite)} className="text-[10px] mt-0.5">
+                    {ANTERIORITE_LABELS[e.anteriorite] ?? e.anteriorite}
+                  </Badge>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // DashboardModule
 // ---------------------------------------------------------------------------
 
@@ -65,6 +204,8 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
   const [resultat, setResultat] = useState<Resultat | null>(null);
   const [balance, setBalance] = useState<LigneBalance[]>([]);
   const [ecritures, setEcritures] = useState<EcritureListItem[]>([]);
+  const [echeances, setEcheances] = useState<LigneEcheance[]>([]);
+  const [caMensuel, setCaMensuel] = useState<CaMensuel[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -72,6 +213,8 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
       setResultat(null);
       setBalance([]);
       setEcritures([]);
+      setEcheances([]);
+      setCaMensuel([]);
       return;
     }
     let cancelled = false;
@@ -80,11 +223,15 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
       window.api.reporting.resultat(magasin.id),
       window.api.reporting.balance(magasin.id),
       window.api.ecritures.list(magasin.id),
-    ]).then(([rRes, bRes, eRes]) => {
+      window.api.reporting.echeancier(magasin.id),
+      window.api.reporting.caMensuel(magasin.id),
+    ]).then(([rRes, bRes, eRes, echRes, caRes]) => {
       if (cancelled) return;
       if (rRes.success) setResultat(rRes.data); else toast.error(rRes.error.message);
       if (bRes.success) setBalance(bRes.data); else toast.error(bRes.error.message);
       if (eRes.success) setEcritures(eRes.data); else toast.error(eRes.error.message);
+      if (echRes.success) setEcheances(echRes.data); else toast.error(echRes.error.message);
+      if (caRes.success) setCaMensuel(caRes.data); else toast.error(caRes.error.message);
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -178,8 +325,11 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Colonne gauche + centre : dernieres ecritures + position tresorerie */}
+        {/* Colonne gauche + centre : graphique CA + dernieres ecritures + position tresorerie */}
         <div className="flex flex-col gap-4 lg:col-span-2">
+          {/* Graphique CA mensuel */}
+          <CaChart data={caMensuel} />
+
           {/* Dernieres ecritures validees */}
           <div className="rounded-lg border border-border bg-card overflow-hidden">
             <div className="border-b border-border bg-muted/30 px-4 py-2.5">
@@ -261,7 +411,7 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
           </div>
         </div>
 
-        {/* Colonne droite : creances / dettes */}
+        {/* Colonne droite : creances / dettes + echeances + resultat */}
         <div className="flex flex-col gap-4">
           <div className="rounded-lg border border-border bg-card p-4">
             <h2 className="mb-3 text-sm font-extrabold uppercase tracking-widest text-muted-foreground">
@@ -282,6 +432,9 @@ export function DashboardModule({ magasin }: Props): React.JSX.Element {
             </div>
             <p className="mt-1 text-xs font-semibold text-muted-foreground">Compte 4011</p>
           </div>
+
+          {/* Echéances à venir */}
+          <EcheancesSection echeances={echeances} />
 
           {/* Recap resultat */}
           {resultat && (
