@@ -60,9 +60,4 @@ describe('magasinInputSchema', () => {
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.libelle).toBe('Super');
   });
-  it('coerce societe_id string vers number', () => {
-    const res = magasinInputSchema.safeParse({ libelle: 'M', societe_id: '3' });
-    expect(res.success).toBe(true);
-    if (res.success) expect(res.data.societe_id).toBe(3);
-  });
 });

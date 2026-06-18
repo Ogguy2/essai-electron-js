@@ -42,6 +42,6 @@ export type SocieteFormValues = z.infer<typeof societeInputSchema>;
 /** Saisie d'un magasin (sans id). */
 export const magasinInputSchema = z.object({
   libelle: z.string().trim().min(1, 'Le libellé du magasin est obligatoire.'),
-  societe_id: z.coerce.number().int().positive('La société est obligatoire.'),
+  societe_id: z.number().int().positive('La société est obligatoire.'),
 });
 export type MagasinFormValues = z.infer<typeof magasinInputSchema>;
