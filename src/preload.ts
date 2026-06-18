@@ -33,6 +33,12 @@ const api: Api = {
   exercices: {
     list: (magasinId) => ipcRenderer.invoke(IPC.exercicesList, magasinId),
   },
+  comptes: {
+    list: (magasinId) => ipcRenderer.invoke(IPC.comptesList, magasinId),
+    create: (magasinId, input) => ipcRenderer.invoke(IPC.comptesCreate, magasinId, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.comptesUpdate, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.comptesDelete, id),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);
