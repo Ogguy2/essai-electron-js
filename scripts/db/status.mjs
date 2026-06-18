@@ -4,7 +4,7 @@
  */
 import { connect, getConfig, tableCount } from './lib.mjs';
 
-const TABLES = ['app_users', 'societes', 'magasins', 'exercices', 'comptes'];
+const TABLES = ['app_users', 'societes', 'magasins', 'exercices', 'comptes', 'journaux'];
 
 async function main() {
   const c = getConfig();
