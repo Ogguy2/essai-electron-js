@@ -7,6 +7,7 @@ import { brouillonsCount } from '@/lib/mock-data';
 import { SocietesModule } from '@/features/societes/SocietesModule';
 import { MagasinsModule } from '@/features/magasins/MagasinsModule';
 import { ComptesModule } from '@/features/comptes/ComptesModule';
+import { JournauxModule } from '@/features/journaux/JournauxModule';
 import type { AuthUser, Magasin, Societe, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
@@ -69,6 +70,8 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
         return <MagasinsModule user={user} onChanged={loadReferentiel} />;
       case 'plan':
         return <ComptesModule user={user} magasin={magasin} />;
+      case 'journaux':
+        return <JournauxModule user={user} magasin={magasin} />;
       default:
         return <Placeholder route={route} />;
     }
