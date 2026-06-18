@@ -27,3 +27,30 @@ export function estEquilibree(lignes: readonly LigneEcriture[]): boolean {
   if (lignes.length < 2) return false;
   return totalDebit(lignes) === totalCredit(lignes);
 }
+
+/** Solde signé d'une ligne (débit − crédit). */
+export function soldeLigne(l: { debit: number; credit: number }): number {
+  return l.debit - l.credit;
+}
+
+/** Ligne valide : montants ≥ 0, débit XOR crédit, non nulle. */
+export function ligneValide(l: { debit: number; credit: number }): boolean {
+  if (l.debit < 0 || l.credit < 0) return false;
+  if (l.debit > 0 && l.credit > 0) return false;
+  return l.debit > 0 || l.credit > 0;
+}
+
+/** Référence : JOURNAL-EXERCICE-0001. */
+export function numeroRef(journal: string, exerciceLibelle: string, seq: number): string {
+  return `${journal}-${exerciceLibelle}-${String(seq).padStart(4, '0')}`;
+}
+
+/** Extourne : inverse débit/crédit de chaque ligne. */
+export function inverseLignes<T extends { debit: number; credit: number }>(lignes: readonly T[]): T[] {
+  return lignes.map((l) => ({ ...l, debit: l.credit, credit: l.debit }));
+}
+
+/** Date ISO dans la période [debut, fin]. */
+export function dateDansPeriode(date: string, debut: string, fin: string): boolean {
+  return date >= debut && date <= fin;
+}
