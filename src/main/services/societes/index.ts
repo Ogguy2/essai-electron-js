@@ -1,10 +1,17 @@
 import type { Societe, SocieteInput } from '../../../shared/ipc';
 import { query, execute, nextId, sqlValue } from '../../db/connection';
 import { requireAdmin } from '../auth';
-import { validateSocieteInput } from '../common/validation';
+import { societeInputSchema, firstZodError } from '../../../shared/schemas';
 import { AppError } from '../common/errors';
 
 /** Service Sociétés (processus principal). Mutations réservées à l'Admin. */
+
+/** Valide la saisie via le schéma Zod partagé ; renvoie les données nettoyées. */
+function parseSociete(input: SocieteInput): SocieteInput {
+  const parsed = societeInputSchema.safeParse(input);
+  if (!parsed.success) throw new AppError('VALIDATION', firstZodError(parsed.error));
+  return parsed.data;
+}
 
 export async function list(): Promise<Societe[]> {
   return query<Societe>(
@@ -14,27 +21,25 @@ export async function list(): Promise<Societe[]> {
 
 export async function create(input: SocieteInput): Promise<Societe> {
   requireAdmin();
-  const err = validateSocieteInput(input);
-  if (err) throw new AppError('VALIDATION', err);
+  const data = parseSociete(input);
   const id = await nextId('societes');
   await execute(
     `INSERT INTO societes (id, raison_sociale, rccm, adresse, telephone) VALUES (` +
-      `${sqlValue(id)}, ${sqlValue(input.raison_sociale.trim())}, ${sqlValue(input.rccm)}, ` +
-      `${sqlValue(input.adresse)}, ${sqlValue(input.telephone)})`,
+      `${sqlValue(id)}, ${sqlValue(data.raison_sociale)}, ${sqlValue(data.rccm)}, ` +
+      `${sqlValue(data.adresse)}, ${sqlValue(data.telephone)})`,
   );
-  return { id, ...input, raison_sociale: input.raison_sociale.trim() };
+  return { id, ...data };
 }
 
 export async function update(id: number, input: SocieteInput): Promise<Societe> {
   requireAdmin();
-  const err = validateSocieteInput(input);
-  if (err) throw new AppError('VALIDATION', err);
+  const data = parseSociete(input);
   await execute(
-    `UPDATE societes SET raison_sociale = ${sqlValue(input.raison_sociale.trim())}, ` +
-      `rccm = ${sqlValue(input.rccm)}, adresse = ${sqlValue(input.adresse)}, ` +
-      `telephone = ${sqlValue(input.telephone)} WHERE id = ${sqlValue(id)}`,
+    `UPDATE societes SET raison_sociale = ${sqlValue(data.raison_sociale)}, ` +
+      `rccm = ${sqlValue(data.rccm)}, adresse = ${sqlValue(data.adresse)}, ` +
+      `telephone = ${sqlValue(data.telephone)} WHERE id = ${sqlValue(id)}`,
   );
-  return { id, ...input, raison_sociale: input.raison_sociale.trim() };
+  return { id, ...data };
 }
 
 export async function remove(id: number): Promise<void> {
