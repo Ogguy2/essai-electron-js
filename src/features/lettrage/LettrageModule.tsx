@@ -289,7 +289,7 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
               onClick={() => void handleLettrer()}
             >
               <Link2 />
-              {lettrant ? 'Lettrage...' : `Lettrer « ${prochainCode} »`}
+              {lettrant ? 'Lettrage...' : `Lettrer "${prochainCode}"`}
             </Button>
           </div>
         </div>
