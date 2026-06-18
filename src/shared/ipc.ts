@@ -2,68 +2,45 @@
  * Contrat IPC partagé entre le processus principal (`main`), le `preload` et le
  * `renderer`. Source unique de vérité des canaux et des types d'échange.
  * Cf. CDC §5.5 (contrats IPC typés + enveloppe de réponse normalisée).
+ *
+ * Les types du domaine vivent dans `src/types/` et sont réexportés ici pour
+ * que tous les imports existants `from '@/shared/ipc'` / `from '../shared/ipc'`
+ * continuent de fonctionner sans modification.
+ *
+ * ⚠️ Imports relatifs obligatoires : ce fichier est consommé par `main` et
+ * `preload` qui ne connaissent pas l'alias `@/`.
  */
 
-export interface IpcError {
-  code: string;
-  message: string;
-}
+// --- Réexports des types d'enveloppe IPC ---
+export type { IpcError, IpcResult } from '../types/ipc';
 
-/** Enveloppe normalisée de toute réponse IPC. */
-export type IpcResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: IpcError };
+// --- Réexports des types du domaine métier ---
+export type {
+  Role,
+  AuthUser,
+  Societe,
+  SocieteInput,
+  Magasin,
+  MagasinInput,
+  Exercice,
+  Compte,
+  CompteInput,
+  UpdateReadyPayload,
+} from '../types/domain';
 
-export type Role = 'Admin' | 'Comptable';
-
-/** Utilisateur authentifié (jamais de mot de passe / hash côté renderer). */
-export interface AuthUser {
-  name: string;
-  username: string;
-  email: string | null;
-  role: Role;
-}
-
-export interface Societe {
-  id: number;
-  raison_sociale: string;
-  rccm: string;
-  adresse: string;
-  telephone: string;
-}
-export type SocieteInput = Omit<Societe, 'id'>;
-
-export interface Magasin {
-  id: number;
-  libelle: string;
-  societe_id: number;
-}
-export type MagasinInput = Omit<Magasin, 'id'>;
-
-export interface Exercice {
-  id: number;
-  magasin_id: number;
-  libelle: string;
-  date_debut: string;
-  date_fin: string;
-  statut: 'ouvert' | 'cloture';
-}
-
-export interface Compte {
-  id: number;
-  magasin_id: number;
-  numero: string;
-  libelle: string;
-  classe: number;
-  collectif: boolean;
-  lettrable: boolean;
-}
-export type CompteInput = Omit<Compte, 'id' | 'magasin_id'>;
-
-/** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
-export interface UpdateReadyPayload {
-  version: string;
-}
+// --- Imports locaux pour construire IPC et Api ---
+import type { IpcResult } from '../types/ipc';
+import type {
+  AuthUser,
+  UpdateReadyPayload,
+  Societe,
+  SocieteInput,
+  Magasin,
+  MagasinInput,
+  Exercice,
+  Compte,
+  CompteInput,
+} from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
 export const IPC = {
