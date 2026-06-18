@@ -220,6 +220,7 @@ export function TiersModule({ user: _user, magasin }: Props): React.JSX.Element 
                 <TableHead>Raison sociale</TableHead>
                 <TableHead className="w-36">Téléphone</TableHead>
                 <TableHead className="w-44">Comptes</TableHead>
+                <TableHead className="w-44 text-right">Plafond crédit</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -250,6 +251,11 @@ export function TiersModule({ user: _user, magasin }: Props): React.JSX.Element 
                         <span className="text-muted-foreground">—</span>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums text-sm">
+                    {t.plafond_credit > 0
+                      ? Math.round(t.plafond_credit).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA'
+                      : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
