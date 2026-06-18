@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link2 } from 'lucide-react';
+import { Link2, Unlink } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import {
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { nextLettrageCode } from '@/domain/reporting';
 import type { Magasin, Compte, Tiers, LigneLettrable } from '@/shared/ipc';
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,7 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
   const [selection, setSelection] = useState<Set<number>>(new Set());
   const [lettrant, setLettrant] = useState(false);
   const [delettrantDialogOpen, setDelettrantDialogOpen] = useState(false);
+  const [delettrantGroupCode, setDelettrantGroupCode] = useState<string | null>(null);
 
   // Charge comptes lettrables + tiers
   useEffect(() => {
@@ -95,6 +97,25 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
     return () => { cancelled = true; };
   }, [magasin, selectedCompte, selectedTiers]);
 
+  // Prochain code de lettrage
+  const prochainCode = useMemo(
+    () => nextLettrageCode(lignes.map((l) => l.lettrage).filter((v): v is string => v !== null)),
+    [lignes],
+  );
+
+  // Groupes lettrés : lignes ayant un code de lettrage, regroupees par code
+  const groupesLettres = useMemo(() => {
+    const map = new Map<string, LigneLettrable[]>();
+    for (const l of lignes) {
+      if (l.lettrage) {
+        const bucket = map.get(l.lettrage);
+        if (bucket) bucket.push(l);
+        else map.set(l.lettrage, [l]);
+      }
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  }, [lignes]);
+
   // Calcul panneau de selection
   const selectionDetails = useMemo(() => {
     const selectedLignes = lignes.filter((l) => selection.has(l.ligne_id));
@@ -142,11 +163,12 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
   }
 
   async function handleDelettrer() {
-    const ids = selectionDetails.selectedLignes
-      .filter((l) => l.lettrage !== null)
-      .map((l) => l.ligne_id);
+    const ids = delettrantGroupCode !== null
+      ? (groupesLettres.find(([code]) => code === delettrantGroupCode)?.[1] ?? []).map((l) => l.ligne_id)
+      : selectionDetails.selectedLignes.filter((l) => l.lettrage !== null).map((l) => l.ligne_id);
     if (ids.length === 0) return;
     setDelettrantDialogOpen(false);
+    setDelettrantGroupCode(null);
     const res = await window.api.lettrage.delettrer(ids);
     if (!res.success) {
       toast.error(res.error.message);
@@ -248,14 +270,17 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
               Equilibre parfait
             </Badge>
           )}
+          <span className="text-xs font-semibold text-muted-foreground">
+            Prochain code : <span className="font-bold text-foreground">{prochainCode}</span>
+          </span>
           <div className="ml-auto flex gap-2">
             {selectionDetails.hasLettrees && (
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => setDelettrantDialogOpen(true)}
+                onClick={() => { setDelettrantGroupCode(null); setDelettrantDialogOpen(true); }}
               >
-                Delettrer
+                <Unlink /> Delettrer
               </Button>
             )}
             <Button
@@ -264,7 +289,7 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
               onClick={() => void handleLettrer()}
             >
               <Link2 />
-              {lettrant ? 'Lettrage...' : 'Lettrer'}
+              {lettrant ? 'Lettrage...' : `Lettrer « ${prochainCode} »`}
             </Button>
           </div>
         </div>
@@ -345,6 +370,54 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
         </div>
       )}
 
+      {/* Section groupes lettres */}
+      {groupesLettres.length > 0 && (
+        <div className="mt-6">
+          <h3 className="mb-3 text-sm font-extrabold uppercase tracking-wider text-muted-foreground">
+            Groupes lettres
+          </h3>
+          <div className="flex flex-col gap-2">
+            {groupesLettres.map(([code, gLignes]) => {
+              const sumD = gLignes.reduce((a, l) => a + l.debit, 0);
+              const sumC = gLignes.reduce((a, l) => a + l.credit, 0);
+              const eq = sumD - sumC;
+              return (
+                <div
+                  key={code}
+                  className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-2.5"
+                >
+                  <Badge variant="outline" className="text-green-700 border-green-400 dark:text-green-400 font-bold text-sm">
+                    {code}
+                  </Badge>
+                  <span className="text-sm font-semibold">{gLignes.length} ligne{gLignes.length > 1 ? 's' : ''}</span>
+                  <span className="text-sm tabular-nums text-muted-foreground">
+                    {eq === 0 ? (
+                      <span className="text-green-600 dark:text-green-400 font-semibold">Equilibre</span>
+                    ) : (
+                      <span className="text-destructive font-semibold">
+                        Ecart : {fmtFcfa(Math.abs(eq))}
+                      </span>
+                    )}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="ml-auto"
+                    onClick={() => {
+                      setSelection(new Set(gLignes.map((l) => l.ligne_id)));
+                      setDelettrantGroupCode(code);
+                      setDelettrantDialogOpen(true);
+                    }}
+                  >
+                    <Unlink className="size-3.5" /> Delettrer
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Bouton lettrer flottant si rien de selectionne */}
       {selectionDetails.count === 0 && lignes.length > 0 && (
         <div className="mt-4 flex justify-end">
@@ -356,13 +429,14 @@ export function LettrageModule({ magasin }: Props): React.JSX.Element {
       )}
 
       {/* AlertDialog delettrage */}
-      <AlertDialog open={delettrantDialogOpen} onOpenChange={setDelettrantDialogOpen}>
+      <AlertDialog open={delettrantDialogOpen} onOpenChange={(o) => { setDelettrantDialogOpen(o); if (!o) setDelettrantGroupCode(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delettrer les lignes ?</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectionDetails.selectedLignes.filter((l) => l.lettrage !== null).length} ligne(s) lettrée(s) seront délettrées.
-              Cette action est réversible (vous pourrez relettrer plus tard).
+              {delettrantGroupCode !== null
+                ? `Le groupe « ${delettrantGroupCode} » sera delettré (${(groupesLettres.find(([c]) => c === delettrantGroupCode)?.[1] ?? []).length} ligne(s)). Cette action est reversible.`
+                : `${selectionDetails.selectedLignes.filter((l) => l.lettrage !== null).length} ligne(s) lettrée(s) seront délettrées. Cette action est réversible (vous pourrez relettrer plus tard).`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
