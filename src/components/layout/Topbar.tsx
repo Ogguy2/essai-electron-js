@@ -62,7 +62,7 @@ export function Topbar({
       {/* Sélecteur de magasin */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-1.5 text-left transition-colors hover:bg-secondary">
+          <button className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-1.5 text-left transition-colors hover:bg-secondary">
             <span className="grid h-7 w-7 flex-none place-items-center rounded-md bg-primary/10 text-primary">
               <Store size={16} />
             </span>
@@ -104,7 +104,7 @@ export function Topbar({
       {/* Sélecteur d'exercice */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-1.5 text-left transition-colors hover:bg-secondary">
+          <button className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border bg-background px-3 py-1.5 text-left transition-colors hover:bg-secondary">
             <span className="grid h-7 w-7 flex-none place-items-center rounded-md bg-primary/10 text-primary">
               <CalendarDays size={16} />
             </span>
@@ -137,7 +137,7 @@ export function Topbar({
       {/* Menu utilisateur */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-2 rounded-lg p-1 transition-colors hover:bg-secondary">
+          <button className="flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-secondary">
             <Avatar className="h-8 w-8">
               <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
                 {initials(user.name)}
