@@ -258,6 +258,14 @@ export function ComptesModule({ user, magasin }: Props): React.JSX.Element {
 
             {!collapsed[classe] && (
               <table className="w-full border-t border-border text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="w-28 px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Numero</th>
+                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Intitule</th>
+                    <th className="px-4 py-2 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">Attributs</th>
+                    {isAdmin && <th className="w-12 px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground text-right">Actions</th>}
+                  </tr>
+                </thead>
                 <tbody>
                   {comptes.map((c) => (
                     <tr key={c.id} className="border-b border-border last:border-0">
