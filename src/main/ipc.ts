@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
+import * as tiers from './services/tiers';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
@@ -104,4 +105,13 @@ export function registerIpcHandlers(): void {
     wrap<Journal>(() => journaux.update(id, input), 'journaux:update'));
   ipcMain.handle(IPC.journauxDelete, (_e, id: number) =>
     wrap<null>(async () => { await journaux.remove(id); return null; }, 'journaux:delete'));
+
+  ipcMain.handle(IPC.tiersList, (_e, magasinId: number) =>
+    wrap<Tiers[]>(() => tiers.list(magasinId), 'tiers:list'));
+  ipcMain.handle(IPC.tiersCreate, (_e, magasinId: number, input: TiersInput) =>
+    wrap<Tiers>(() => tiers.create(magasinId, input), 'tiers:create'));
+  ipcMain.handle(IPC.tiersUpdate, (_e, id: number, input: TiersInput) =>
+    wrap<Tiers>(() => tiers.update(id, input), 'tiers:update'));
+  ipcMain.handle(IPC.tiersDelete, (_e, id: number) =>
+    wrap<null>(async () => { await tiers.remove(id); return null; }, 'tiers:delete'));
 }
