@@ -14,6 +14,8 @@ import { ExercicesModule } from '@/features/exercices/ExercicesModule';
 import { EcrituresModule } from '@/features/ecritures/EcrituresModule';
 import { EtatsModule } from '@/features/etats/EtatsModule';
 import { ConsolidationModule } from '@/features/consolidation/ConsolidationModule';
+import { DashboardModule } from '@/features/dashboard/DashboardModule';
+import { LettrageModule } from '@/features/lettrage/LettrageModule';
 import type { AuthUser, Magasin, Societe, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
@@ -90,6 +92,10 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
         return <EtatsModule magasin={magasin} />;
       case 'consolidation':
         return <ConsolidationModule />;
+      case 'dashboard':
+        return <DashboardModule magasin={magasin} />;
+      case 'lettrage':
+        return <LettrageModule magasin={magasin} />;
       default:
         return <Placeholder route={route} />;
     }
