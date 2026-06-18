@@ -6,6 +6,7 @@ import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
 import { brouillonsCount } from '@/lib/mock-data';
 import { SocietesModule } from '@/features/societes/SocietesModule';
 import { MagasinsModule } from '@/features/magasins/MagasinsModule';
+import { ComptesModule } from '@/features/comptes/ComptesModule';
 import type { AuthUser, Magasin, Societe, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
@@ -66,6 +67,8 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
         return <SocietesModule user={user} onChanged={loadReferentiel} />;
       case 'magasins':
         return <MagasinsModule user={user} onChanged={loadReferentiel} />;
+      case 'plan':
+        return <ComptesModule user={user} magasin={magasin} />;
       default:
         return <Placeholder route={route} />;
     }
