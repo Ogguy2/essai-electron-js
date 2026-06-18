@@ -27,6 +27,7 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
   const [form, setForm] = useState<SocieteInput>(EMPTY);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   async function load() {
     setLoading(true);
@@ -41,21 +42,29 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
   function openCreate() {
     setEditing(null);
     setForm(EMPTY);
+    setFormError(null);
     setOpen(true);
   }
   function openEdit(s: Societe) {
     setEditing(s);
     setForm({ raison_sociale: s.raison_sociale, rccm: s.rccm, adresse: s.adresse, telephone: s.telephone });
+    setFormError(null);
     setOpen(true);
   }
 
   async function save() {
+    // Validation client minimale
+    if (!form.raison_sociale.trim()) { setFormError('La raison sociale est requise.'); return; }
     setSaving(true);
     const res = editing
       ? await window.api.societes.update(editing.id, form)
       : await window.api.societes.create(form);
     setSaving(false);
-    if (!res.success) { toast.error(res.error.message); return; }
+    if (!res.success) {
+      if (res.error.code === 'VALIDATION') { setFormError(res.error.message); return; }
+      toast.error(res.error.message);
+      return;
+    }
     toast.success(editing ? 'Société modifiée.' : 'Société créée.');
     setOpen(false);
     await load();
@@ -76,7 +85,9 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">Sociétés</h2>
         {isAdmin && (
-          <Button onClick={openCreate}><Plus size={16} /> Nouvelle société</Button>
+          <Button  size={"lg"} onClick={openCreate}>
+            <Plus size={16} /> Nouvelle société 
+          </Button>
         )}
       </div>
 
@@ -127,20 +138,21 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
             <div className="grid gap-1.5">
               <Label htmlFor="rs">Raison sociale</Label>
               <Input id="rs" value={form.raison_sociale}
-                onChange={(e) => setForm({ ...form, raison_sociale: e.target.value })} autoFocus />
+                onChange={(e) => { setFormError(null); setForm({ ...form, raison_sociale: e.target.value }); }} autoFocus />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="rccm">RCCM</Label>
-              <Input id="rccm" value={form.rccm} onChange={(e) => setForm({ ...form, rccm: e.target.value })} />
+              <Input id="rccm" value={form.rccm} onChange={(e) => { setFormError(null); setForm({ ...form, rccm: e.target.value }); }} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="adr">Adresse</Label>
-              <Input id="adr" value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} />
+              <Input id="adr" value={form.adresse} onChange={(e) => { setFormError(null); setForm({ ...form, adresse: e.target.value }); }} />
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="tel">Téléphone</Label>
-              <Input id="tel" value={form.telephone} onChange={(e) => setForm({ ...form, telephone: e.target.value })} />
+              <Input id="tel" value={form.telephone} onChange={(e) => { setFormError(null); setForm({ ...form, telephone: e.target.value }); }} />
             </div>
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>

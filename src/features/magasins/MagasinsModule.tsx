@@ -29,6 +29,7 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   const [form, setForm] = useState<MagasinInput>({ libelle: '', societe_id: 0 });
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const societeName = (id: number) => societes.find((s) => s.id === id)?.raison_sociale ?? '—';
 
@@ -44,21 +45,30 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   function openCreate() {
     setEditing(null);
     setForm({ libelle: '', societe_id: societes[0]?.id ?? 0 });
+    setFormError(null);
     setOpen(true);
   }
   function openEdit(m: Magasin) {
     setEditing(m);
     setForm({ libelle: m.libelle, societe_id: m.societe_id });
+    setFormError(null);
     setOpen(true);
   }
 
   async function save() {
+    // Validation client minimale
+    if (!form.libelle.trim()) { setFormError('Le libellé est requis.'); return; }
+    if (!form.societe_id) { setFormError('Veuillez choisir une société.'); return; }
     setSaving(true);
     const res = editing
       ? await window.api.magasins.update(editing.id, form)
       : await window.api.magasins.create(form);
     setSaving(false);
-    if (!res.success) { toast.error(res.error.message); return; }
+    if (!res.success) {
+      if (res.error.code === 'VALIDATION') { setFormError(res.error.message); return; }
+      toast.error(res.error.message);
+      return;
+    }
     toast.success(editing ? 'Magasin modifié.' : 'Magasin créé — plan comptable initialisé (117 comptes).');
     setOpen(false);
     await load();
@@ -124,12 +134,12 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
             <div className="grid gap-1.5">
               <Label htmlFor="lib">Libellé</Label>
               <Input id="lib" value={form.libelle} autoFocus
-                onChange={(e) => setForm({ ...form, libelle: e.target.value })} />
+                onChange={(e) => { setFormError(null); setForm({ ...form, libelle: e.target.value }); }} />
             </div>
             <div className="grid gap-1.5">
               <Label>Société</Label>
               <Select value={form.societe_id ? String(form.societe_id) : undefined}
-                onValueChange={(v) => setForm({ ...form, societe_id: Number(v) })}>
+                onValueChange={(v) => { setFormError(null); setForm({ ...form, societe_id: Number(v) }); }}>
                 <SelectTrigger><SelectValue placeholder="Choisir une société" /></SelectTrigger>
                 <SelectContent>
                   {societes.map((s) => (
@@ -143,6 +153,7 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
                 Le plan comptable SYSCOHADA sera initialisé automatiquement pour ce magasin.
               </p>
             )}
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
