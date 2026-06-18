@@ -81,3 +81,27 @@ export type TiersInput = Omit<Tiers, 'id' | 'magasin_id' | 'compte_client' | 'co
 export interface UpdateReadyPayload {
   version: string;
 }
+
+export interface User {
+  id: number;
+  username: string;
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+}
+
+export interface UserCreateInput {
+  username: string;
+  name: string;
+  email: string;
+  role: Role;
+  password: string;
+}
+
+export interface UserUpdateInput {
+  name: string;
+  email: string;
+  role: Role;
+  active: boolean;
+}

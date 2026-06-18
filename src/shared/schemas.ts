@@ -74,3 +74,32 @@ export const tiersInputSchema = z
     path: ['est_client'],
   });
 export type TiersFormValues = z.infer<typeof tiersInputSchema>;
+
+/** Création d'un utilisateur. */
+export const userCreateSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .min(1, "Le nom d'utilisateur est obligatoire.")
+    .max(50, "Nom d'utilisateur trop long (50 max)."),
+  name: z.string().trim().min(1, 'Le nom est obligatoire.'),
+  email: z.string().trim(),
+  role: z.enum(['Admin', 'Comptable']),
+  password: z.string().min(6, 'Mot de passe : 6 caractères minimum.'),
+});
+export type UserCreateFormValues = z.infer<typeof userCreateSchema>;
+
+/** Modification d'un utilisateur (username et password hors scope). */
+export const userUpdateSchema = z.object({
+  name: z.string().trim().min(1, 'Le nom est obligatoire.'),
+  email: z.string().trim(),
+  role: z.enum(['Admin', 'Comptable']),
+  active: z.boolean(),
+});
+export type UserUpdateFormValues = z.infer<typeof userUpdateSchema>;
+
+/** Changement de mot de passe. */
+export const passwordSchema = z.object({
+  password: z.string().min(6, 'Mot de passe : 6 caractères minimum.'),
+});
+export type PasswordFormValues = z.infer<typeof passwordSchema>;

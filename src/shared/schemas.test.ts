@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema } from './schemas';
+import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema, userCreateSchema, passwordSchema } from './schemas';
 
 const base = { numero: '601', libelle: 'Achats', classe: 6, collectif: false, lettrable: false };
 
@@ -103,5 +103,46 @@ describe('tiersInputSchema', () => {
       expect(res.data.code).toBe('CLI001');
       expect(res.data.est_client).toBe(true);
     }
+  });
+});
+
+describe('userCreateSchema', () => {
+  const base = {
+    username: 'jdupont',
+    name: 'Jean Dupont',
+    email: 'jd@example.com',
+    role: 'Comptable' as const,
+    password: 'secret1',
+  };
+
+  it('refuse un username vide', () => {
+    const res = userCreateSchema.safeParse({ ...base, username: '  ' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe("Le nom d'utilisateur est obligatoire.");
+  });
+
+  it('refuse un mot de passe trop court', () => {
+    const res = userCreateSchema.safeParse({ ...base, password: '123' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Mot de passe : 6 caractères minimum.');
+  });
+
+  it('accepte une saisie valide et nettoie username', () => {
+    const res = userCreateSchema.safeParse({ ...base, username: '  jdupont  ' });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.username).toBe('jdupont');
+  });
+});
+
+describe('passwordSchema', () => {
+  it('refuse moins de 6 caractères', () => {
+    const res = passwordSchema.safeParse({ password: '12345' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Mot de passe : 6 caractères minimum.');
+  });
+
+  it('accepte un mot de passe valide', () => {
+    const res = passwordSchema.safeParse({ password: 'abcdef' });
+    expect(res.success).toBe(true);
   });
 });
