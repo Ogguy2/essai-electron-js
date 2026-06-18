@@ -49,6 +49,17 @@ export interface Exercice {
   statut: 'ouvert' | 'cloture';
 }
 
+export interface Compte {
+  id: number;
+  magasin_id: number;
+  numero: string;
+  libelle: string;
+  classe: number;
+  collectif: boolean;
+  lettrable: boolean;
+}
+export type CompteInput = Omit<Compte, 'id' | 'magasin_id'>;
+
 /** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
 export interface UpdateReadyPayload {
   version: string;
@@ -72,6 +83,10 @@ export const IPC = {
   magasinsUpdate: 'magasins:update',
   magasinsDelete: 'magasins:delete',
   exercicesList: 'exercices:list',
+  comptesList: 'comptes:list',
+  comptesCreate: 'comptes:create',
+  comptesUpdate: 'comptes:update',
+  comptesDelete: 'comptes:delete',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -104,5 +119,11 @@ export interface Api {
   };
   exercices: {
     list(magasinId: number): Promise<IpcResult<Exercice[]>>;
+  };
+  comptes: {
+    list(magasinId: number): Promise<IpcResult<Compte[]>>;
+    create(magasinId: number, input: CompteInput): Promise<IpcResult<Compte>>;
+    update(id: number, input: CompteInput): Promise<IpcResult<Compte>>;
+    delete(id: number): Promise<IpcResult<null>>;
   };
 }
