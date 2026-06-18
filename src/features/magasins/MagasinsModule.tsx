@@ -6,6 +6,7 @@ import {
   Plus, Save, X, Store, Building2, MoreHorizontal, Pencil, Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -28,9 +29,10 @@ import type { AuthUser, Magasin, Societe } from '@/shared/ipc';
 interface Props {
   user: AuthUser;
   onChanged?: () => void;
+  magasinCourantId?: number;
 }
 
-export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
+export function MagasinsModule({ user, onChanged, magasinCourantId }: Props): React.JSX.Element {
   const isAdmin = user.role === 'Admin';
   const [rows, setRows] = useState<Magasin[]>([]);
   const [societes, setSocietes] = useState<Societe[]>([]);
@@ -142,7 +144,14 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
                     <Store size={22} />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[18px] font-semibold leading-tight truncate">{m.libelle}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[18px] font-semibold leading-tight truncate">{m.libelle}</span>
+                      {m.id === magasinCourantId && (
+                        <Badge variant="secondary" className="text-green-700 bg-green-100 border-green-300 dark:bg-green-900/40 dark:text-green-400 shrink-0">
+                          Actif
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 text-[12.5px] font-bold text-muted-foreground mt-0.5">
                       <Building2 size={13} className="flex-none" />
                       {soc ? soc.raison_sociale : '—'}

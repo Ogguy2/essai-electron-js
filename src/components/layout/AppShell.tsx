@@ -75,7 +75,7 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
       case 'societes':
         return <SocietesModule user={user} onChanged={loadReferentiel} />;
       case 'magasins':
-        return <MagasinsModule user={user} onChanged={loadReferentiel} />;
+        return <MagasinsModule user={user} onChanged={loadReferentiel} magasinCourantId={magasin?.id} />;
       case 'plan':
         return <ComptesModule user={user} magasin={magasin} />;
       case 'journaux':
