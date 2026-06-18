@@ -10,6 +10,10 @@ import {
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { AuthUser, Societe, SocieteInput } from '@/shared/ipc';
 
 const EMPTY: SocieteInput = { raison_sociale: '', rccm: '', adresse: '', telephone: '' };
@@ -28,6 +32,7 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   async function load() {
     setLoading(true);
@@ -71,9 +76,10 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
     onChanged?.();
   }
 
-  async function remove(s: Societe) {
-    if (!confirm(`Supprimer « ${s.raison_sociale} » ?`)) return;
-    const res = await window.api.societes.delete(s.id);
+  async function confirmDelete() {
+    if (deleteId === null) return;
+    const res = await window.api.societes.delete(deleteId);
+    setDeleteId(null);
     if (!res.success) { toast.error(res.error.message); return; }
     toast.success('Société supprimée.');
     await load();
@@ -119,7 +125,7 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
                   <Button variant="ghost" size="icon-sm" onClick={() => openEdit(s)} aria-label="Modifier">
                     <Pencil size={15} />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => void remove(s)} aria-label="Supprimer">
+                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleteId(s.id)} aria-label="Supprimer">
                     <Trash2 size={15} />
                   </Button>
                 </TableCell>
@@ -162,6 +168,21 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer la société ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La société et ses données associées seront définitivement supprimées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

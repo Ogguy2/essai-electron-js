@@ -13,6 +13,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import type { AuthUser, Magasin, MagasinInput, Societe } from '@/shared/ipc';
 
 interface Props {
@@ -30,6 +34,7 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const societeName = (id: number) => societes.find((s) => s.id === id)?.raison_sociale ?? '—';
 
@@ -75,9 +80,10 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
     onChanged?.();
   }
 
-  async function remove(m: Magasin) {
-    if (!confirm(`Supprimer « ${m.libelle} » et son plan comptable ?`)) return;
-    const res = await window.api.magasins.delete(m.id);
+  async function confirmDelete() {
+    if (deleteId === null) return;
+    const res = await window.api.magasins.delete(deleteId);
+    setDeleteId(null);
     if (!res.success) { toast.error(res.error.message); return; }
     toast.success('Magasin supprimé.');
     await load();
@@ -115,7 +121,7 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
                   <Button variant="ghost" size="icon-sm" onClick={() => openEdit(m)} aria-label="Modifier">
                     <Pencil size={15} />
                   </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => void remove(m)} aria-label="Supprimer">
+                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleteId(m.id)} aria-label="Supprimer">
                     <Trash2 size={15} />
                   </Button>
                 </TableCell>
@@ -163,6 +169,21 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le magasin ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le magasin et son plan comptable seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()}>Supprimer</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
