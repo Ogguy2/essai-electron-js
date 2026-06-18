@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput, type EcritureListItem, type EcritureAvecLignes, type EcritureInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput, type EcritureListItem, type EcritureAvecLignes, type EcritureInput, type LigneBalance, type MouvementGL, type Resultat, type LigneEcheance, type LigneLettrable } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
 import * as tiers from './services/tiers';
@@ -12,6 +12,8 @@ import * as societes from './services/societes';
 import * as magasins from './services/magasins';
 import * as exercices from './services/exercices';
 import { AppError } from './services/common/errors';
+import * as reporting from './services/reporting';
+import * as lettrage from './services/lettrage';
 
 /** Exécute une action et renvoie un IpcResult, en mappant AppError -> code. */
 async function wrap<T>(action: () => Promise<T>, channel: string): Promise<IpcResult<T>> {
@@ -152,4 +154,28 @@ export function registerIpcHandlers(): void {
     wrap<EcritureAvecLignes>(() => ecritures.reverse(id), 'ecritures:reverse'));
   ipcMain.handle(IPC.ecrituresDelete, (_e, id: number) =>
     wrap<null>(async () => { await ecritures.remove(id); return null; }, 'ecritures:delete'));
+
+  // Reporting
+  ipcMain.handle(IPC.reportingBalance, (_e, magasinId: number) =>
+    wrap<LigneBalance[]>(() => reporting.getBalance(magasinId), 'reporting:balance'));
+  ipcMain.handle(IPC.reportingGrandLivre, (_e, magasinId: number, filtre: { compte?: string; tiers?: string }) =>
+    wrap<MouvementGL[]>(() => reporting.getGrandLivre(magasinId, filtre), 'reporting:grand-livre'));
+  ipcMain.handle(IPC.reportingResultat, (_e, magasinId: number) =>
+    wrap<Resultat>(() => reporting.getResultat(magasinId), 'reporting:resultat'));
+  ipcMain.handle(IPC.reportingEcheancier, (_e, magasinId: number) =>
+    wrap<LigneEcheance[]>(() => reporting.getEcheancier(magasinId), 'reporting:echeancier'));
+
+  // Consolidation
+  ipcMain.handle(IPC.consolidationBalance, (_e, societeId: number, dateDebut: string, dateFin: string) =>
+    wrap<LigneBalance[]>(() => reporting.getConsolidationBalance(societeId, dateDebut, dateFin), 'consolidation:balance'));
+  ipcMain.handle(IPC.consolidationResultat, (_e, societeId: number, dateDebut: string, dateFin: string) =>
+    wrap<Resultat>(() => reporting.getConsolidationResultat(societeId, dateDebut, dateFin), 'consolidation:resultat'));
+
+  // Lettrage
+  ipcMain.handle(IPC.lettrageListeLignes, (_e, magasinId: number, compte: string, tiers?: string) =>
+    wrap<LigneLettrable[]>(() => lettrage.lignesLettrables(magasinId, compte, tiers), 'lettrage:lignes'));
+  ipcMain.handle(IPC.lettrageLettrer, (_e, ligneIds: number[], code?: string) =>
+    wrap<string>(() => lettrage.lettrer(ligneIds, code), 'lettrage:lettrer'));
+  ipcMain.handle(IPC.lettrageDelettrer, (_e, ligneIds: number[]) =>
+    wrap<null>(async () => { await lettrage.delettrer(ligneIds); return null; }, 'lettrage:delettrer'));
 }

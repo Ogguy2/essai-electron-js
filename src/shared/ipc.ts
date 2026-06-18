@@ -41,6 +41,13 @@ export type {
   EcritureAvecLignes,
   LigneInput,
   EcritureInput,
+  Mouvement,
+  LigneBalance,
+  SoldeCompte,
+  MouvementGL,
+  Resultat,
+  LigneEcheance,
+  LigneLettrable,
 } from '../types/domain';
 
 // --- Imports locaux pour construire IPC et Api ---
@@ -66,6 +73,11 @@ import type {
   EcritureListItem,
   EcritureAvecLignes,
   EcritureInput,
+  LigneBalance,
+  MouvementGL,
+  Resultat,
+  LigneEcheance,
+  LigneLettrable,
 } from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
@@ -115,6 +127,15 @@ export const IPC = {
   ecrituresInvalidate: 'ecritures:invalidate',
   ecrituresReverse: 'ecritures:reverse',
   ecrituresDelete: 'ecritures:delete',
+  reportingBalance: 'reporting:balance',
+  reportingGrandLivre: 'reporting:grand-livre',
+  reportingResultat: 'reporting:resultat',
+  reportingEcheancier: 'reporting:echeancier',
+  consolidationBalance: 'consolidation:balance',
+  consolidationResultat: 'consolidation:resultat',
+  lettrageListeLignes: 'lettrage:lignes',
+  lettrageLettrer: 'lettrage:lettrer',
+  lettrageDelettrer: 'lettrage:delettrer',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -186,5 +207,20 @@ export interface Api {
     invalidate(id: number): Promise<IpcResult<null>>;
     reverse(id: number): Promise<IpcResult<EcritureAvecLignes>>;
     delete(id: number): Promise<IpcResult<null>>;
+  };
+  reporting: {
+    balance(magasinId: number): Promise<IpcResult<LigneBalance[]>>;
+    grandLivre(magasinId: number, filtre: { compte?: string; tiers?: string }): Promise<IpcResult<MouvementGL[]>>;
+    resultat(magasinId: number): Promise<IpcResult<Resultat>>;
+    echeancier(magasinId: number): Promise<IpcResult<LigneEcheance[]>>;
+  };
+  consolidation: {
+    balance(societeId: number, dateDebut: string, dateFin: string): Promise<IpcResult<LigneBalance[]>>;
+    resultat(societeId: number, dateDebut: string, dateFin: string): Promise<IpcResult<Resultat>>;
+  };
+  lettrage: {
+    lignes(magasinId: number, compte: string, tiers?: string): Promise<IpcResult<LigneLettrable[]>>;
+    lettrer(ligneIds: number[], code?: string): Promise<IpcResult<string>>;
+    delettrer(ligneIds: number[]): Promise<IpcResult<null>>;
   };
 }

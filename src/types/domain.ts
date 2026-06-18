@@ -132,3 +132,41 @@ export interface LigneInput {
 export interface EcritureInput {
   exercice_id: number; journal: string; date_ecriture: string; libelle: string; lignes: LigneInput[];
 }
+
+// --- Reporting / consolidation / lettrage ---
+
+export interface Mouvement {
+  compte: string; classe: number; compte_libelle: string; tiers: string | null;
+  date: string; journal: string; ref: string; ligne_libelle: string;
+  debit: number; credit: number; echeance: string | null; lettrage: string | null;
+}
+
+export interface LigneBalance {
+  numero: string; libelle: string; classe: number;
+  debit: number; credit: number; solde_debiteur: number; solde_crediteur: number;
+}
+
+export interface SoldeCompte { debit: number; credit: number; solde: number; }
+
+export interface MouvementGL extends Mouvement { solde_progressif: number; }
+
+export interface Resultat {
+  charges: number; produits: number; resultat: number;
+  charges_detail: LigneBalance[]; produits_detail: LigneBalance[];
+}
+
+export interface LigneEcheance {
+  ecriture_id: number; ligne_id: number;
+  date: string; journal: string; ref: string;
+  tiers: string | null; libelle: string;
+  montant: number; echeance: string;
+  anteriorite: 'non_echu' | '0_30' | '31_60' | '61_90' | 'plus_90';
+}
+
+export interface LigneLettrable {
+  ecriture_id: number; ligne_id: number;
+  date: string; ref: string;
+  tiers: string | null; libelle: string;
+  debit: number; credit: number;
+  lettrage: string | null;
+}

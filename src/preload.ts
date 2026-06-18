@@ -72,6 +72,21 @@ const api: Api = {
     reverse: (id) => ipcRenderer.invoke(IPC.ecrituresReverse, id),
     delete: (id) => ipcRenderer.invoke(IPC.ecrituresDelete, id),
   },
+  reporting: {
+    balance: (magasinId) => ipcRenderer.invoke(IPC.reportingBalance, magasinId),
+    grandLivre: (magasinId, filtre) => ipcRenderer.invoke(IPC.reportingGrandLivre, magasinId, filtre),
+    resultat: (magasinId) => ipcRenderer.invoke(IPC.reportingResultat, magasinId),
+    echeancier: (magasinId) => ipcRenderer.invoke(IPC.reportingEcheancier, magasinId),
+  },
+  consolidation: {
+    balance: (societeId, dateDebut, dateFin) => ipcRenderer.invoke(IPC.consolidationBalance, societeId, dateDebut, dateFin),
+    resultat: (societeId, dateDebut, dateFin) => ipcRenderer.invoke(IPC.consolidationResultat, societeId, dateDebut, dateFin),
+  },
+  lettrage: {
+    lignes: (magasinId, compte, tiers) => ipcRenderer.invoke(IPC.lettrageListeLignes, magasinId, compte, tiers),
+    lettrer: (ligneIds, code) => ipcRenderer.invoke(IPC.lettrageLettrer, ligneIds, code),
+    delettrer: (ligneIds) => ipcRenderer.invoke(IPC.lettrageDelettrer, ligneIds),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);
