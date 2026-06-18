@@ -18,6 +18,21 @@ const api: Api = {
       return () => ipcRenderer.removeListener(IPC.updateReady, listener);
     },
   },
+  societes: {
+    list: () => ipcRenderer.invoke(IPC.societesList),
+    create: (input) => ipcRenderer.invoke(IPC.societesCreate, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.societesUpdate, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.societesDelete, id),
+  },
+  magasins: {
+    list: () => ipcRenderer.invoke(IPC.magasinsList),
+    create: (input) => ipcRenderer.invoke(IPC.magasinsCreate, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.magasinsUpdate, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.magasinsDelete, id),
+  },
+  exercices: {
+    list: (magasinId) => ipcRenderer.invoke(IPC.exercicesList, magasinId),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);
