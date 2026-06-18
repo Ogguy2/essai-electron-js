@@ -11,6 +11,9 @@ const external = [
   ...builtinModules,
   ...builtinModules.map((m) => `node:${m}`),
   'odbc',
+  // electron-updater + ses deps (lazy-val, js-yaml…) : chargés depuis node_modules
+  // au runtime plutôt que bundlés.
+  'electron-updater',
 ];
 
 // https://vitejs.dev/config

@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './main/ipc';
 import { bootstrapDatabase } from './main/db';
 import { closePool } from './main/db/connection';
 import { logError } from './main/logger';
+import * as updater from './main/services/updater';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -16,7 +17,7 @@ if (started) {
 process.on('uncaughtException', (e) => logError('uncaughtException', e));
 process.on('unhandledRejection', (r) => logError('unhandledRejection', r));
 
-const createWindow = () => {
+const createWindow = (): BrowserWindow => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -39,6 +40,8 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  return mainWindow;
 };
 
 // This method will be called when Electron has finished
@@ -47,7 +50,12 @@ const createWindow = () => {
 app.on('ready', () => {
   void bootstrapDatabase();
   registerIpcHandlers();
-  createWindow();
+  const mainWindow = createWindow();
+
+  // Mises à jour auto : uniquement en version packagée (electron-updater lève en dev).
+  if (app.isPackaged) {
+    updater.init(mainWindow);
+  }
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

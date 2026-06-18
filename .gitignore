@@ -93,6 +93,9 @@ typings/
 # Electron-Forge
 out/
 
+# Sortie du `vite build` de validation hors Electron (vite.config.mts)
+dist/
+
 # Pack driver ODBC HFSQL (~75 Mo) — NON versionné (alourdirait l'historique Git).
 # Doit être présent localement dans docs/ pour builder l'installeur (npm run make:nsis).
 # Le récupérer auprès de PC SOFT / de l'équipe et le placer ici manuellement.

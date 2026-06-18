@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { LoginScreen } from '@/features/auth/LoginScreen';
 import { SplashScreen } from '@/features/auth/SplashScreen';
 import { AppShell } from '@/components/layout/AppShell';
@@ -23,6 +24,28 @@ export function App(): React.JSX.Element {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Mises à jour auto : le main notifie quand une MAJ est téléchargée et prête.
+  // On affiche un toast persistant ; l'utilisateur choisit quand redémarrer.
+  useEffect(() => {
+    const off = window.api.updates.onReady(({ version }) => {
+      toast.info(`Mise à jour ${version} prête à installer`, {
+        description: 'Redémarrez pour appliquer la nouvelle version.',
+        duration: Infinity,
+        action: {
+          label: 'Redémarrer maintenant',
+          onClick: () => {
+            void window.api.updates.install();
+          },
+        },
+        cancel: {
+          label: 'Plus tard',
+          onClick: () => undefined,
+        },
+      });
+    });
+    return off;
   }, []);
 
   async function handleLogout() {

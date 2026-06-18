@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { IPC, type AuthUser, type IpcResult } from '../shared/ipc';
 import { authenticate, logout, currentSession } from './services/auth';
+import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
 
 /**
@@ -39,5 +40,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.authMe, (): IpcResult<AuthUser | null> => {
     return { success: true, data: currentSession() };
+  });
+
+  // Applique la mise à jour téléchargée puis redémarre (le process se ferme aussitôt).
+  ipcMain.handle(IPC.updateInstall, (): IpcResult<null> => {
+    installUpdate();
+    return { success: true, data: null };
   });
 }

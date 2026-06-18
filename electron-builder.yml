@@ -15,6 +15,14 @@ win:
   target:
     - nsis
 
+# Fait générer le fichier de métadonnées `latest.yml` (lu par electron-updater côté
+# client) en plus de Setup.exe + .blockmap. À déposer tel quel sur le serveur de MAJ.
+# NB : l'URL réelle du flux est fixée au runtime via UPDATE_FEED_URL (.env) ; la valeur
+# ci-dessous ne sert qu'à déclencher la génération de latest.yml — ajuster si besoin.
+publish:
+  provider: generic
+  url: https://updates.example.com/sicocompte/
+
 nsis:
   # oneClick:false → vrai assistant (Bienvenue → Dossier → Installation → Terminer)
   oneClick: false

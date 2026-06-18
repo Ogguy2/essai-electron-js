@@ -24,11 +24,20 @@ export interface AuthUser {
   role: Role;
 }
 
+/** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
+export interface UpdateReadyPayload {
+  version: string;
+}
+
 /** Noms des canaux IPC (`<module>:<action>`). */
 export const IPC = {
   authLogin: 'auth:login',
   authLogout: 'auth:logout',
   authMe: 'auth:me',
+  /** renderer → main : applique la mise à jour téléchargée et redémarre. */
+  updateInstall: 'update:install',
+  /** main → renderer : une mise à jour est téléchargée et prête à installer. */
+  updateReady: 'update:ready',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -37,5 +46,14 @@ export interface Api {
     login(username: string, password: string): Promise<IpcResult<AuthUser>>;
     logout(): Promise<IpcResult<null>>;
     me(): Promise<IpcResult<AuthUser | null>>;
+  };
+  updates: {
+    /** Applique la mise à jour téléchargée et redémarre l'application. */
+    install(): Promise<IpcResult<null>>;
+    /**
+     * S'abonne à l'événement « mise à jour prête ». Renvoie une fonction de
+     * désabonnement à appeler au démontage.
+     */
+    onReady(callback: (payload: UpdateReadyPayload) => void): () => void;
   };
 }
