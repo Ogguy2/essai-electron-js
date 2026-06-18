@@ -43,7 +43,7 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
     if (sRes.success) setSocietes(sRes.data);
     if (mRes.success) {
       setMagasins(mRes.data);
-      setMagasin((cur) => cur ?? mRes.data[0] ?? null);
+      setMagasin((cur) => mRes.data.find((m) => m.id === cur?.id) ?? mRes.data[0] ?? null);
     }
   }
   useEffect(() => { void loadReferentiel(); }, []);
