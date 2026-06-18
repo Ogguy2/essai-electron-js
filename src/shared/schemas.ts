@@ -29,3 +29,19 @@ export type CompteFormValues = z.infer<typeof compteInputSchema>;
 export function firstZodError(error: z.ZodError): string {
   return error.issues[0]?.message ?? 'Données invalides.';
 }
+
+/** Saisie d'une société (sans id). */
+export const societeInputSchema = z.object({
+  raison_sociale: z.string().trim().min(1, 'La raison sociale est obligatoire.'),
+  rccm: z.string().trim(),
+  adresse: z.string().trim(),
+  telephone: z.string().trim(),
+});
+export type SocieteFormValues = z.infer<typeof societeInputSchema>;
+
+/** Saisie d'un magasin (sans id). */
+export const magasinInputSchema = z.object({
+  libelle: z.string().trim().min(1, 'Le libellé du magasin est obligatoire.'),
+  societe_id: z.coerce.number().int().positive('La société est obligatoire.'),
+});
+export type MagasinFormValues = z.infer<typeof magasinInputSchema>;

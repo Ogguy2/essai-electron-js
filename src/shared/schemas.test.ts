@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compteInputSchema, firstZodError } from './schemas';
+import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema } from './schemas';
 
 const base = { numero: '601', libelle: 'Achats', classe: 6, collectif: false, lettrable: false };
 
@@ -28,5 +28,41 @@ describe('compteInputSchema', () => {
     const res = compteInputSchema.safeParse({ ...base, libelle: '  Achats  ' });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.libelle).toBe('Achats');
+  });
+});
+
+describe('societeInputSchema', () => {
+  it('refuse une raison sociale vide', () => {
+    const res = societeInputSchema.safeParse({ raison_sociale: '  ', rccm: '', adresse: '', telephone: '' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('La raison sociale est obligatoire.');
+  });
+  it('accepte une société valide et nettoie la raison sociale', () => {
+    const res = societeInputSchema.safeParse({ raison_sociale: '  ACME  ', rccm: 'X', adresse: 'Y', telephone: 'Z' });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.raison_sociale).toBe('ACME');
+  });
+});
+
+describe('magasinInputSchema', () => {
+  it('refuse un libellé vide', () => {
+    const res = magasinInputSchema.safeParse({ libelle: '  ', societe_id: 1 });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Le libellé du magasin est obligatoire.');
+  });
+  it('refuse societe_id = 0', () => {
+    const res = magasinInputSchema.safeParse({ libelle: 'M', societe_id: 0 });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('La société est obligatoire.');
+  });
+  it('accepte un magasin valide et nettoie le libellé', () => {
+    const res = magasinInputSchema.safeParse({ libelle: '  Super  ', societe_id: 1 });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.libelle).toBe('Super');
+  });
+  it('coerce societe_id string vers number', () => {
+    const res = magasinInputSchema.safeParse({ libelle: 'M', societe_id: '3' });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.societe_id).toBe(3);
   });
 });
