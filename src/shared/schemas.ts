@@ -103,3 +103,20 @@ export const passwordSchema = z.object({
   password: z.string().min(6, 'Mot de passe : 6 caractères minimum.'),
 });
 export type PasswordFormValues = z.infer<typeof passwordSchema>;
+
+/** Saisie d'un exercice comptable (sans id, magasin_id et statut). */
+export const exerciceInputSchema = z
+  .object({
+    libelle: z.string().trim().min(1, 'Le libellé est obligatoire.'),
+    date_debut: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date de début invalide (AAAA-MM-JJ).'),
+    date_fin: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date de fin invalide (AAAA-MM-JJ).'),
+  })
+  .refine((v) => v.date_debut <= v.date_fin, {
+    message: 'La date de fin doit être postérieure à la date de début.',
+    path: ['date_fin'],
+  });
+export type ExerciceFormValues = z.infer<typeof exerciceInputSchema>;

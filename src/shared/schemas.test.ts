@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema, userCreateSchema, passwordSchema } from './schemas';
+import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema, tiersInputSchema, userCreateSchema, passwordSchema, exerciceInputSchema } from './schemas';
 
 const base = { numero: '601', libelle: 'Achats', classe: 6, collectif: false, lettrable: false };
 
@@ -144,5 +144,21 @@ describe('passwordSchema', () => {
   it('accepte un mot de passe valide', () => {
     const res = passwordSchema.safeParse({ password: 'abcdef' });
     expect(res.success).toBe(true);
+  });
+});
+
+describe('exerciceInputSchema', () => {
+  const base = { libelle: 'Exercice 2025', date_debut: '2025-01-01', date_fin: '2025-12-31' };
+
+  it('refuse quand la date de fin est antérieure à la date de début', () => {
+    const res = exerciceInputSchema.safeParse({ ...base, date_debut: '2025-06-01', date_fin: '2025-01-01' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('La date de fin doit être postérieure à la date de début.');
+  });
+
+  it('accepte un exercice valide et nettoie le libellé', () => {
+    const res = exerciceInputSchema.safeParse({ ...base, libelle: '  Exercice 2025  ' });
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.data.libelle).toBe('Exercice 2025');
   });
 });
