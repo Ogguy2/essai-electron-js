@@ -1,22 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import {
+  Plus, Save, X, Store, Building2, MoreHorizontal, Pencil, Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader,
+} from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import type { AuthUser, Magasin, MagasinInput, Societe } from '@/shared/ipc';
 
 interface Props {
@@ -34,13 +37,16 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Magasin | null>(null);
 
-  const societeName = (id: number) => societes.find((s) => s.id === id)?.raison_sociale ?? '—';
+  const societeById = (id: number): Societe | undefined => societes.find((s) => s.id === id);
 
   async function load() {
     setLoading(true);
-    const [mRes, sRes] = await Promise.all([window.api.magasins.list(), window.api.societes.list()]);
+    const [mRes, sRes] = await Promise.all([
+      window.api.magasins.list(),
+      window.api.societes.list(),
+    ]);
     if (mRes.success) setRows(mRes.data); else toast.error(mRes.error.message);
     if (sRes.success) setSocietes(sRes.data);
     setLoading(false);
@@ -61,7 +67,6 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   }
 
   async function save() {
-    // Validation client minimale
     if (!form.libelle.trim()) { setFormError('Le libellé est requis.'); return; }
     if (!form.societe_id) { setFormError('Veuillez choisir une société.'); return; }
     setSaving(true);
@@ -81,9 +86,9 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   }
 
   async function confirmDelete() {
-    if (deleteId === null) return;
-    const res = await window.api.magasins.delete(deleteId);
-    setDeleteId(null);
+    if (deleteTarget === null) return;
+    const res = await window.api.magasins.delete(deleteTarget.id);
+    setDeleteTarget(null);
     if (!res.success) { toast.error(res.error.message); return; }
     toast.success('Magasin supprimé.');
     await load();
@@ -91,96 +96,192 @@ export function MagasinsModule({ user, onChanged }: Props): React.JSX.Element {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold">Magasins</h2>
-        {isAdmin && <Button size="lg" onClick={openCreate}><Plus size={16} /> Nouveau magasin</Button>}
+    <div className="p-6 pb-16 max-w-[1480px] mx-auto">
+      {/* En-tête de page */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight leading-tight">Magasins</h1>
+          <p className="mt-1 text-sm font-semibold text-muted-foreground max-w-lg">
+            Entités comptables isolées (comptes, journaux, écritures par magasin).
+            L'identité légale est portée par la société de rattachement.
+          </p>
+        </div>
+        {isAdmin && (
+          <Button size="lg" onClick={openCreate}>
+            <Plus /> Nouveau magasin
+          </Button>
+        )}
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Libellé</TableHead>
-            <TableHead>Société</TableHead>
-            {isAdmin && <TableHead className="w-24 text-right">Actions</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading && (
-            <TableRow><TableCell colSpan={3} className="text-muted-foreground">Chargement…</TableCell></TableRow>
-          )}
-          {!loading && rows.length === 0 && (
-            <TableRow><TableCell colSpan={3} className="text-muted-foreground">Aucun magasin.</TableCell></TableRow>
-          )}
-          {rows.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell className="font-semibold">{m.libelle}</TableCell>
-              <TableCell>{societeName(m.societe_id)}</TableCell>
-              {isAdmin && (
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon-sm" onClick={() => openEdit(m)} aria-label="Modifier">
-                    <Pencil size={15} />
-                  </Button>
-                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleteId(m.id)} aria-label="Supprimer">
-                    <Trash2 size={15} />
-                  </Button>
-                </TableCell>
-              )}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {/* Grille de cartes */}
+      {loading ? (
+        <p className="text-muted-foreground text-sm">Chargement…</p>
+      ) : rows.length === 0 ? (
+        <p className="text-muted-foreground text-sm">Aucun magasin.</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+          {rows.map((m) => {
+            const soc = societeById(m.societe_id);
+            return (
+              <div
+                key={m.id}
+                className="rounded-lg border border-border bg-card shadow-sm px-5 py-[18px]"
+              >
+                {/* Header de la carte */}
+                <div className="flex items-start gap-[13px] mb-[14px]">
+                  <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <Store size={22} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[18px] font-semibold leading-tight truncate">{m.libelle}</div>
+                    <div className="flex items-center gap-1 text-[12.5px] font-bold text-muted-foreground mt-0.5">
+                      <Building2 size={13} className="flex-none" />
+                      {soc ? soc.raison_sociale : '—'}
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                          <MoreHorizontal />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem className="gap-2" onClick={() => openEdit(m)}>
+                          <Pencil size={15} /> Modifier
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          className="gap-2"
+                          onClick={() => setDeleteTarget(m)}
+                        >
+                          <Trash2 size={15} /> Supprimer
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
 
+                {/* Infos légales (depuis la société) */}
+                <div className="grid grid-cols-2 gap-x-5 gap-y-3 border-t border-border pt-[14px]">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-muted-foreground">RCCM (société)</span>
+                    <b className="text-[13.5px] font-bold font-mono">{soc?.rccm || '—'}</b>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-muted-foreground">Téléphone</span>
+                    <b className="text-[13.5px] font-bold">{soc?.telephone || '—'}</b>
+                  </div>
+                  <div className="col-span-2 flex flex-col gap-0.5">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-muted-foreground">Adresse (société)</span>
+                    <b className="text-[13.5px] font-bold">{soc?.adresse || '—'}</b>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal création / édition */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[560px]" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>{editing ? 'Modifier le magasin' : 'Nouveau magasin'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="lib">Libellé</Label>
-              <Input id="lib" value={form.libelle} autoFocus
-                onChange={(e) => { setFormError(null); setForm({ ...form, libelle: e.target.value }); }} />
+            <div className="flex items-start gap-[13px] border-b border-border pb-[18px] -mt-1">
+              <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Store size={20} />
+              </span>
+              <div className="flex-1 min-w-0 pr-7">
+                <p className="text-[10.5px] font-bold uppercase tracking-widest text-primary mb-1">
+                  {editing ? 'Magasin' : 'Nouvelle entité'}
+                </p>
+                <p className="text-[17px] font-bold leading-tight">
+                  {editing ? 'Modifier le magasin' : 'Nouveau magasin'}
+                </p>
+                {!editing && (
+                  <p className="mt-1 text-[13px] font-medium text-muted-foreground leading-snug">
+                    Le plan comptable SYSCOHADA sera pré-chargé automatiquement.
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute top-3 right-3"
+                onClick={() => setOpen(false)}
+              >
+                <X />
+                <span className="sr-only">Fermer</span>
+              </Button>
             </div>
-            <div className="grid gap-1.5">
-              <Label>Société</Label>
-              <Select value={form.societe_id ? String(form.societe_id) : undefined}
-                onValueChange={(v) => { setFormError(null); setForm({ ...form, societe_id: Number(v) }); }}>
-                <SelectTrigger><SelectValue placeholder="Choisir une société" /></SelectTrigger>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-[14px] pb-2 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="lib">Libellé du magasin</Label>
+              <Input
+                id="lib"
+                value={form.libelle}
+                placeholder="ex. Siconex - Treichville"
+                autoFocus
+                onChange={(e) => { setFormError(null); setForm({ ...form, libelle: e.target.value }); }}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Société de rattachement</Label>
+              <Select
+                value={form.societe_id ? String(form.societe_id) : undefined}
+                onValueChange={(v) => { setFormError(null); setForm({ ...form, societe_id: Number(v) }); }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une société" />
+                </SelectTrigger>
                 <SelectContent>
                   {societes.map((s) => (
                     <SelectItem key={s.id} value={String(s.id)}>{s.raison_sociale}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            {!editing && (
-              <p className="text-xs text-muted-foreground">
-                Le plan comptable SYSCOHADA sera initialisé automatiquement pour ce magasin.
+              <p className="text-[11.5px] font-semibold text-muted-foreground">
+                L'identité légale (RCCM, adresse, téléphone) du cartouche provient de cette société.
               </p>
-            )}
+            </div>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
+
           <DialogFooter>
-            <Button variant="outline" size="lg" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button size="lg" onClick={() => void save()} disabled={saving}>
-              {saving ? 'Enregistrement…' : 'Enregistrer'}
+            <Button variant="outline" size="lg" onClick={() => setOpen(false)}>
+              <X /> Annuler
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => void save()}
+              disabled={saving || !form.libelle.trim() || !form.societe_id}
+            >
+              <Save /> {saving ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteId !== null} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+      {/* AlertDialog suppression */}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer le magasin ?</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Le magasin et son plan comptable seront définitivement supprimés.
+              {deleteTarget && `Le magasin « ${deleteTarget.libelle} » et son plan comptable seront définitivement supprimés.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()}>Supprimer</AlertDialogAction>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()}>
+              Supprimer
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
