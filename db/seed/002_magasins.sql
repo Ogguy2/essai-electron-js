@@ -16,7 +16,7 @@
 --
 -- Données de référence (NE PAS exécuter) :
 --
--- INSERT INTO magasins (id, libelle, societe_id) VALUES (1, 'Siconex - Marcory', 1);
--- INSERT INTO magasins (id, libelle, societe_id) VALUES (2, 'Siconex - Ena',     1);
+INSERT INTO magasins (id, libelle, societe_id) VALUES (1, 'Siconex - Marcory', 1);
+INSERT INTO magasins (id, libelle, societe_id) VALUES (2, 'Siconex - Ena',     1);
 --
 -- =====================================================================
