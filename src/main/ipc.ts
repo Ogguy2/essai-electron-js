@@ -1,8 +1,26 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput } from '../shared/ipc';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
+import * as societes from './services/societes';
+import * as magasins from './services/magasins';
+import * as exercices from './services/exercices';
+import { AppError } from './services/common/errors';
+
+/** Exécute une action et renvoie un IpcResult, en mappant AppError -> code. */
+async function wrap<T>(action: () => Promise<T>, channel: string): Promise<IpcResult<T>> {
+  try {
+    return { success: true, data: await action() };
+  } catch (err) {
+    if (err instanceof AppError) {
+      return { success: false, error: { code: err.code, message: err.message } };
+    }
+    console.error(`[ipc] ${channel} :`, (err as Error).message);
+    logError(`ipc.${channel}`, err);
+    return { success: false, error: { code: 'DB_ERROR', message: 'Opération impossible. Réessayez.' } };
+  }
+}
 
 /**
  * Enregistre tous les handlers IPC du processus principal.
@@ -47,4 +65,23 @@ export function registerIpcHandlers(): void {
     installUpdate();
     return { success: true, data: null };
   });
+
+  ipcMain.handle(IPC.societesList, () => wrap<Societe[]>(() => societes.list(), 'societes:list'));
+  ipcMain.handle(IPC.societesCreate, (_e, input: SocieteInput) =>
+    wrap<Societe>(() => societes.create(input), 'societes:create'));
+  ipcMain.handle(IPC.societesUpdate, (_e, id: number, input: SocieteInput) =>
+    wrap<Societe>(() => societes.update(id, input), 'societes:update'));
+  ipcMain.handle(IPC.societesDelete, (_e, id: number) =>
+    wrap<null>(async () => { await societes.remove(id); return null; }, 'societes:delete'));
+
+  ipcMain.handle(IPC.magasinsList, () => wrap<Magasin[]>(() => magasins.list(), 'magasins:list'));
+  ipcMain.handle(IPC.magasinsCreate, (_e, input: MagasinInput) =>
+    wrap<Magasin>(() => magasins.create(input), 'magasins:create'));
+  ipcMain.handle(IPC.magasinsUpdate, (_e, id: number, input: MagasinInput) =>
+    wrap<Magasin>(() => magasins.update(id, input), 'magasins:update'));
+  ipcMain.handle(IPC.magasinsDelete, (_e, id: number) =>
+    wrap<null>(async () => { await magasins.remove(id); return null; }, 'magasins:delete'));
+
+  ipcMain.handle(IPC.exercicesList, (_e, magasinId: number) =>
+    wrap<Exercice[]>(() => exercices.list(magasinId), 'exercices:list'));
 }
