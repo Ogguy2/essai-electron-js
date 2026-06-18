@@ -4,27 +4,8 @@
  * HFSQL sera branché. Repris de docs/design/data.js.
  */
 
-export interface Societe {
-  id: number;
-  raison_sociale: string;
-  rccm: string;
-  adresse: string;
-  telephone: string;
-}
-
-export interface Magasin {
-  id: number;
-  libelle: string;
-  societe_id: number;
-}
-
-export interface Exercice {
-  id: number;
-  libelle: string;
-  date_debut: string;
-  date_fin: string;
-  statut: 'ouvert' | 'cloture';
-}
+import type { Societe, Magasin, Exercice } from '@/shared/ipc';
+export type { Societe, Magasin, Exercice };
 
 export interface Utilisateur {
   name: string;
@@ -83,8 +64,8 @@ export const magasins: Magasin[] = [
 ];
 
 export const exercices: Exercice[] = [
-  { id: 1, libelle: '2025', date_debut: '2025-01-01', date_fin: '2025-12-31', statut: 'cloture' },
-  { id: 2, libelle: '2026', date_debut: '2026-01-01', date_fin: '2026-12-31', statut: 'ouvert' },
+  { id: 1, magasin_id: 1, libelle: '2025', date_debut: '2025-01-01', date_fin: '2025-12-31', statut: 'cloture' },
+  { id: 2, magasin_id: 1, libelle: '2026', date_debut: '2026-01-01', date_fin: '2026-12-31', statut: 'ouvert' },
 ];
 
 export const user: Utilisateur = {
