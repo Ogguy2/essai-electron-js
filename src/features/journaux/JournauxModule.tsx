@@ -182,11 +182,14 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
                     <span className="font-mono font-bold text-[18px] text-primary leading-tight">
                       {j.code}
                     </span>
-                    <Badge>{typeLibelle(j.type)}</Badge>
                     {!j.active && <Badge variant="secondary">Inactif</Badge>}
+                    {j.code === 'AN' && <Badge>Automatique</Badge>}
                   </div>
-                  <div className="text-[13.5px] font-semibold text-foreground mt-0.5 truncate">
+                  <div className="text-[14px] font-bold text-foreground mt-0.5 truncate">
                     {j.libelle}
+                  </div>
+                  <div className="text-[12.5px] font-bold text-muted-foreground mt-0.5">
+                    {typeLibelle(j.type)}
                   </div>
                 </div>
                 {isAdmin && (
