@@ -12,15 +12,16 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
-import { societeById, type Magasin, type Exercice } from '@/lib/mock-data';
+import { societeById } from '@/lib/mock-data';
+import type { Magasin, Exercice } from '@/shared/ipc';
 import type { AuthUser } from '@/shared/ipc';
 
 interface TopbarProps {
   route: RouteId;
-  magasin: Magasin;
+  magasin: Magasin | null;
   magasins: Magasin[];
   onMagasinChange: (m: Magasin) => void;
-  exercice: Exercice;
+  exercice: Exercice | null;
   exercices: Exercice[];
   onExerciceChange: (e: Exercice) => void;
   user: AuthUser;
@@ -66,9 +67,11 @@ export function Topbar({
             </span>
             <span className="flex flex-col leading-tight">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {societeById[magasin.societe_id]?.raison_sociale ?? 'Magasin'}
+                {magasin ? (societeById[magasin.societe_id]?.raison_sociale ?? 'Magasin') : '—'}
               </span>
-              <span className="text-[13px] font-bold">{magasin.libelle.replace('Siconex - ', '')}</span>
+              <span className="text-[13px] font-bold">
+                {magasin ? magasin.libelle.replace('Siconex - ', '') : '—'}
+              </span>
             </span>
             <ChevronDown size={15} className="text-muted-foreground" />
           </button>
@@ -89,7 +92,7 @@ export function Topbar({
                       <div className="font-bold">{m.libelle}</div>
                       <div className="text-[11.5px] font-semibold text-muted-foreground">{s.rccm}</div>
                     </div>
-                    {m.id === magasin.id && <Check size={16} className="text-primary" />}
+                    {magasin && m.id === magasin.id && <Check size={16} className="text-primary" />}
                   </DropdownMenuItem>
                 ))}
             </React.Fragment>
@@ -106,7 +109,7 @@ export function Topbar({
             </span>
             <span className="flex flex-col leading-tight">
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Exercice</span>
-              <span className="text-[13px] font-bold">{exercice.libelle}</span>
+              <span className="text-[13px] font-bold">{exercice ? exercice.libelle : '—'}</span>
             </span>
             <ChevronDown size={15} className="text-muted-foreground" />
           </button>
@@ -122,7 +125,7 @@ export function Topbar({
                   {ex.statut === 'ouvert' ? 'Ouvert' : 'Clôturé'}
                 </div>
               </div>
-              {ex.id === exercice.id && <Check size={16} className="text-primary" />}
+              {exercice && ex.id === exercice.id && <Check size={16} className="text-primary" />}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
-import { magasins, exercices, brouillonsCount, type Magasin, type Exercice } from '@/lib/mock-data';
-import type { AuthUser } from '@/shared/ipc';
+import { brouillonsCount } from '@/lib/mock-data';
+import { SocietesModule } from '@/features/societes/SocietesModule';
+import { MagasinsModule } from '@/features/magasins/MagasinsModule';
+import type { AuthUser, Magasin, Exercice } from '@/shared/ipc';
 
 interface AppShellProps {
   user: AuthUser;
@@ -26,14 +28,51 @@ function Placeholder({ route }: { route: RouteId }): React.JSX.Element {
 
 export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
   const [route, setRoute] = useState<RouteId>('dashboard');
-  const [magasin, setMagasin] = useState<Magasin>(magasins[0]);
-  const [exercice, setExercice] = useState<Exercice>(
-    exercices.find((e) => e.statut === 'ouvert') ?? exercices[0],
-  );
+  const [magasins, setMagasins] = useState<Magasin[]>([]);
+  const [magasin, setMagasin] = useState<Magasin | null>(null);
+  const [exercices, setExercices] = useState<Exercice[]>([]);
+  const [exercice, setExercice] = useState<Exercice | null>(null);
+
+  // Charge la liste des magasins (référentiel global).
+  async function loadMagasins() {
+    const res = await window.api.magasins.list();
+    if (res.success) {
+      setMagasins(res.data);
+      setMagasin((cur) => cur ?? res.data[0] ?? null);
+    }
+  }
+  useEffect(() => { void loadMagasins(); }, []);
+
+  // Charge les exercices du magasin courant.
+  useEffect(() => {
+    if (!magasin) { setExercices([]); setExercice(null); return; }
+    let cancelled = false;
+    void window.api.exercices.list(magasin.id).then((res) => {
+      if (cancelled || !res.success) return;
+      setExercices(res.data);
+      setExercice(res.data.find((e) => e.statut === 'ouvert') ?? res.data[0] ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [magasin]);
+
+  function renderRoute(): React.JSX.Element {
+    switch (route) {
+      case 'societes':
+        return <SocietesModule user={user} onChanged={loadMagasins} />;
+      case 'magasins':
+        return <MagasinsModule user={user} onChanged={loadMagasins} />;
+      default:
+        return <Placeholder route={route} />;
+    }
+  }
 
   return (
     <SidebarProvider>
-      <AppSidebar route={route} onNavigate={setRoute} badges={{ ecritures: brouillonsCount(magasin.id) }} />
+      <AppSidebar
+        route={route}
+        onNavigate={setRoute}
+        badges={{ ecritures: magasin ? brouillonsCount(magasin.id) : 0 }}
+      />
       <SidebarInset className="flex h-screen min-w-0 flex-col overflow-hidden">
         <Topbar
           route={route}
@@ -46,9 +85,7 @@ export function AppShell({ user, onLogout }: AppShellProps): React.JSX.Element {
           user={user}
           onLogout={onLogout}
         />
-        <main className="flex-1 overflow-y-auto">
-          <Placeholder route={route} />
-        </main>
+        <main className="flex-1 overflow-y-auto">{renderRoute()}</main>
       </SidebarInset>
     </SidebarProvider>
   );
