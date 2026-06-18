@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import { isNumeroValide, classeFromNumero } from '../domain/compte';
+import { isJournalType } from '../domain/journal';
 
 /** Saisie d'un compte du plan comptable (sans id ni magasin_id). */
 export const compteInputSchema = z
@@ -45,3 +46,12 @@ export const magasinInputSchema = z.object({
   societe_id: z.number().int().positive('La société est obligatoire.'),
 });
 export type MagasinFormValues = z.infer<typeof magasinInputSchema>;
+
+/** Saisie d'un journal comptable (sans id ni magasin_id). */
+export const journalInputSchema = z.object({
+  code: z.string().trim().min(1, 'Le code du journal est obligatoire.').max(8, 'Code trop long (8 max).'),
+  libelle: z.string().trim().min(1, 'Le libellé du journal est obligatoire.'),
+  type: z.string().refine(isJournalType, 'Type de journal invalide.'),
+  active: z.boolean(),
+});
+export type JournalFormValues = z.infer<typeof journalInputSchema>;

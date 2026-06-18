@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema } from './schemas';
+import { compteInputSchema, firstZodError, societeInputSchema, magasinInputSchema, journalInputSchema } from './schemas';
 
 const base = { numero: '601', libelle: 'Achats', classe: 6, collectif: false, lettrable: false };
 
@@ -59,5 +59,22 @@ describe('magasinInputSchema', () => {
     const res = magasinInputSchema.safeParse({ libelle: '  Super  ', societe_id: 1 });
     expect(res.success).toBe(true);
     if (res.success) expect(res.data.libelle).toBe('Super');
+  });
+});
+
+describe('journalInputSchema', () => {
+  const base = { code: 'VTE', libelle: 'Ventes', type: 'VTE', active: true };
+  it('refuse un type invalide', () => {
+    const res = journalInputSchema.safeParse({ ...base, type: 'XXX' });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(firstZodError(res.error)).toBe('Type de journal invalide.');
+  });
+  it('accepte un journal valide', () => {
+    const res = journalInputSchema.safeParse(base);
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.code).toBe('VTE');
+      expect(res.data.type).toBe('VTE');
+    }
   });
 });

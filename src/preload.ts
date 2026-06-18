@@ -39,6 +39,12 @@ const api: Api = {
     update: (id, input) => ipcRenderer.invoke(IPC.comptesUpdate, id, input),
     delete: (id) => ipcRenderer.invoke(IPC.comptesDelete, id),
   },
+  journaux: {
+    list: (magasinId) => ipcRenderer.invoke(IPC.journauxList, magasinId),
+    create: (magasinId, input) => ipcRenderer.invoke(IPC.journauxCreate, magasinId, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.journauxUpdate, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.journauxDelete, id),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

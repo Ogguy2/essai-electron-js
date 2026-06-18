@@ -49,6 +49,16 @@ export interface Compte {
 }
 export type CompteInput = Omit<Compte, 'id' | 'magasin_id'>;
 
+export interface Journal {
+  id: number;
+  magasin_id: number;
+  code: string;
+  libelle: string;
+  type: string;
+  active: boolean;
+}
+export type JournalInput = Omit<Journal, 'id' | 'magasin_id'>;
+
 /** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
 export interface UpdateReadyPayload {
   version: string;
