@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import { IPC, type AuthUser, type IpcResult } from '../shared/ipc';
 import { authenticate, logout, currentSession } from './services/auth';
+import { logError } from './logger';
 
 /**
  * Enregistre tous les handlers IPC du processus principal.
@@ -10,15 +11,24 @@ import { authenticate, logout, currentSession } from './services/auth';
 export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC.authLogin,
-    (_event, username: string, password: string): IpcResult<AuthUser> => {
-      const user = authenticate(username, password);
-      if (!user) {
+    async (_event, username: string, password: string): Promise<IpcResult<AuthUser>> => {
+      try {
+        const user = await authenticate(username, password);
+        if (!user) {
+          return {
+            success: false,
+            error: { code: 'AUTH_INVALID', message: 'Identifiants incorrects. Réessayez.' },
+          };
+        }
+        return { success: true, data: user };
+      } catch (err) {
+        console.error('[auth] échec login :', (err as Error).message);
+        logError('ipc.auth:login', err);
         return {
           success: false,
-          error: { code: 'AUTH_INVALID', message: 'Identifiants incorrects. Réessayez.' },
+          error: { code: 'AUTH_ERROR', message: 'Base indisponible. Réessayez.' },
         };
       }
-      return { success: true, data: user };
     },
   );
 

@@ -1,12 +1,20 @@
+import 'dotenv/config';
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpcHandlers } from './main/ipc';
+import { bootstrapDatabase } from './main/db';
+import { closePool } from './main/db/connection';
+import { logError } from './main/logger';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
+
+// Filets de sécurité globaux : on consigne toute erreur non interceptée.
+process.on('uncaughtException', (e) => logError('uncaughtException', e));
+process.on('unhandledRejection', (r) => logError('unhandledRejection', r));
 
 const createWindow = () => {
   // Create the browser window.
@@ -37,6 +45,7 @@ const createWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
+  void bootstrapDatabase();
   registerIpcHandlers();
   createWindow();
 });
@@ -48,6 +57,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Libère les connexions HFSQL à la fermeture.
+app.on('will-quit', () => {
+  void closePool();
 });
 
 app.on('activate', () => {

@@ -1,0 +1,19 @@
+{
+  // Empêche le file-watcher / l'indexeur de recherche de VS Code d'ouvrir des
+  // handles sur les artefacts de build. Sans ça, Code.exe verrouille
+  // `out/**/app.asar` et fait échouer `npm run package`/`make` avec
+  // « EBUSY: resource busy or locked, unlink ... app.asar » sous Windows.
+  "files.watcherExclude": {
+    "**/out/**": true,
+    "**/.vite/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/out": true,
+    "**/.vite": true
+  },
+  "files.exclude": {
+    "**/out": true,
+    "**/.vite": true
+  }
+}

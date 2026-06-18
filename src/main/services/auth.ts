@@ -1,37 +1,34 @@
-import type { AuthUser } from '../../shared/ipc';
+import bcrypt from 'bcryptjs';
+import type { AuthUser, Role } from '../../shared/ipc';
+import { findByUsername } from './user-store';
 
 /**
  * Service d'authentification (processus principal uniquement).
- *
- * ⚠️ PROVISOIRE : table d'utilisateurs **en dur**, comparaison en clair.
- * À remplacer par une vérification contre la table `users` de la base HFSQL,
- * avec mots de passe **hachés** (argon2/bcrypt) — cf. CDC §4.1. La signature
- * publique (`authenticate` / `logout` / `currentSession`) restera identique.
+ * Vérifie les identifiants contre la table `users` HFSQL (mot de passe haché bcrypt).
+ * La session courante est conservée en mémoire dans le main.
  */
-
-interface StoredUser extends AuthUser {
-  password: string;
-}
-
-const USERS: StoredUser[] = [
-  { username: 'admin', password: 'siconex', name: 'Aïcha Koné', email: 'a.kone@siconex.ci', role: 'Admin' },
-  { username: 'comptable', password: 'siconex', name: 'Koffi Yao', email: null, role: 'Comptable' },
-];
 
 let currentUser: AuthUser | null = null;
 
-/** Vérifie les identifiants ; renvoie l'utilisateur (sans secret) ou null. */
-export function authenticate(username: string, password: string): AuthUser | null {
-  const match = USERS.find(
-    (u) => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password,
-  );
-  if (!match) {
-    currentUser = null;
+export async function authenticate(username: string, password: string): Promise<AuthUser | null> {
+  const row = await findByUsername(username);
+  if (!row) {
     return null;
   }
-  const { password: _password, ...safe } = match;
-  currentUser = safe;
-  return safe;
+  const isActive = row.active === true || row.active === 1 || String(row.active) === '1';
+  if (!isActive) {
+    return null;
+  }
+  if (!bcrypt.compareSync(password, row.password_hash)) {
+    return null;
+  }
+  currentUser = {
+    name: row.name,
+    username: row.username,
+    email: row.email ? row.email : null,
+    role: row.role as Role,
+  };
+  return currentUser;
 }
 
 export function logout(): void {

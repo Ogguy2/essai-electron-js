@@ -34,7 +34,7 @@ const FEATURES = [
 
 export function LoginScreen({ onLogin }: LoginScreenProps): React.JSX.Element {
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('siconex');
+  const [password, setPassword] = useState('password');
   const [showPw, setShowPw] = useState(false);
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
@@ -192,8 +192,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps): React.JSX.Element {
 
           <div className="mt-5 flex items-center justify-center gap-1.5 rounded-[10px] bg-secondary p-3 text-[13px] font-semibold text-muted-foreground">
             <Info size={14} />
-            Démo — utilisateur <b className="font-extrabold text-foreground">admin</b>, mot de passe{' '}
-            <b className="font-extrabold text-foreground">siconex</b>
+            Démo — <b className="font-extrabold text-foreground">admin</b> ou{' '}
+            <b className="font-extrabold text-foreground">user</b>, mot de passe{' '}
+            <b className="font-extrabold text-foreground">password</b>
           </div>
         </form>
       </div>

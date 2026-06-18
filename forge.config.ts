@@ -4,12 +4,27 @@ import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    // Le plugin Vite force par défaut `ignore` à tout exclure sauf `/.vite`,
+    // ce qui laisse `node_modules` HORS du package. Or `odbc` est natif (non
+    // bundlé, marqué `external`) : il doit être présent au runtime, avec son
+    // arbre de deps prod (@mapbox/node-pre-gyp, async…). On fournit donc notre
+    // propre `ignore` (respecté par le plugin) qui garde `.vite`, le manifeste
+    // et `node_modules` ; `prune: true` (défaut) retire les devDependencies.
+    // `auto-unpack-natives` sort ensuite le binaire .node de l'asar.
+    ignore: (file: string) => {
+      if (!file) return false;
+      if (file.startsWith('/.vite')) return false;
+      if (file === '/package.json') return false;
+      if (file.startsWith('/node_modules')) return false;
+      return true;
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -19,6 +34,10 @@ const config: ForgeConfig = {
     new MakerDeb({}),
   ],
   plugins: [
+    // Dépaquète les modules natifs (.node, ex. `odbc`) hors de l'app.asar vers
+    // app.asar.unpacked/ — sinon Electron ne peut pas charger le binaire et
+    // lève « Cannot find module 'odbc' » dans le main au démarrage.
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.
