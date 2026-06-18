@@ -4,6 +4,7 @@ import { requireAdmin } from '../auth';
 import { magasinInputSchema, firstZodError } from '../../../shared/schemas';
 import { toAsciiUpper } from '../../../domain/text';
 import { buildComptesPlan } from './plan-comptable';
+import { DEFAULT_JOURNAUX } from '../../../domain/journal';
 import { AppError } from '../common/errors';
 
 /** Service Magasins (processus principal). Mutations réservées à l'Admin. */
@@ -49,6 +50,13 @@ export async function create(input: MagasinInput): Promise<Magasin> {
         `INSERT INTO comptes (magasin_id, numero, libelle, classe, collectif, lettrable) VALUES (` +
           `${sqlValue(id)}, ${sqlValue(c.numero)}, ${sqlValue(c.libelle)}, ` +
           `${sqlValue(c.classe)}, ${sqlValue(c.collectif)}, ${sqlValue(c.lettrable)})`,
+      );
+    }
+    for (const j of DEFAULT_JOURNAUX) {
+      await run(
+        `INSERT INTO journaux (magasin_id, code, libelle, type, active) VALUES (` +
+          `${sqlValue(id)}, ${sqlValue(toAsciiUpper(j.code))}, ${sqlValue(toAsciiUpper(j.libelle))}, ` +
+          `${sqlValue(j.type)}, 1)`,
       );
     }
   });
