@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import {
-  NotebookText, Plus, Pencil, Trash2, MoreHorizontal, X, Save,
+  NotebookText, Plus, Pencil, Trash2, MoreHorizontal, X, Save, ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +27,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { journalInputSchema, type JournalFormValues } from '@/shared/schemas';
 import { JOURNAL_TYPES } from '@/domain/journal';
-import type { AuthUser, Journal, Magasin } from '@/shared/ipc';
+import type { AuthUser, Journal, Magasin, EcritureListItem } from '@/shared/ipc';
+
+function fmtFcfa(n: number): string {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA';
+}
 
 const DEFAULT_VALUES: JournalFormValues = {
   code: '',
@@ -45,6 +49,7 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
   const isAdmin = user.role === 'Admin';
 
   const [rows, setRows] = useState<Journal[]>([]);
+  const [ecritures, setEcritures] = useState<EcritureListItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Journal | null>(null);
@@ -64,22 +69,30 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
   });
 
   async function load() {
-    if (!magasin) { setRows([]); return; }
+    if (!magasin) { setRows([]); setEcritures([]); return; }
     setLoading(true);
-    const res = await window.api.journaux.list(magasin.id);
-    if (res.success) setRows(res.data); else toast.error(res.error.message);
+    const [jRes, eRes] = await Promise.all([
+      window.api.journaux.list(magasin.id),
+      window.api.ecritures.list(magasin.id),
+    ]);
+    if (jRes.success) setRows(jRes.data); else toast.error(jRes.error.message);
+    if (eRes.success) setEcritures(eRes.data);
     setLoading(false);
   }
 
   // Garde anti-race : si l'utilisateur change de magasin pendant un list() lent,
   // on ignore la réponse périmée.
   useEffect(() => {
-    if (!magasin) { setRows([]); return; }
+    if (!magasin) { setRows([]); setEcritures([]); return; }
     let cancelled = false;
     setLoading(true);
-    void window.api.journaux.list(magasin.id).then((res) => {
+    void Promise.all([
+      window.api.journaux.list(magasin.id),
+      window.api.ecritures.list(magasin.id),
+    ]).then(([jRes, eRes]) => {
       if (cancelled) return;
-      if (res.success) setRows(res.data); else toast.error(res.error.message);
+      if (jRes.success) setRows(jRes.data); else toast.error(jRes.error.message);
+      if (eRes.success) setEcritures(eRes.data);
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -133,6 +146,30 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
     return JOURNAL_TYPES.find((t) => t.code === code)?.libelle ?? code;
   }
 
+  const stats = useMemo(() => {
+    const actifs = rows.filter((j) => j.active).length;
+    const total = rows.length;
+    const totalMouvemente = ecritures
+      .filter((e) => e.statut === 'validee')
+      .reduce((s, e) => s + e.total_debit, 0);
+    const volumeByJournal = new Map<string, number>();
+    const countByJournal = new Map<string, number>();
+    for (const e of ecritures) {
+      volumeByJournal.set(e.journal, (volumeByJournal.get(e.journal) ?? 0) + e.total_debit);
+      countByJournal.set(e.journal, (countByJournal.get(e.journal) ?? 0) + 1);
+    }
+    let maxVolume = 1;
+    for (const v of volumeByJournal.values()) {
+      if (v > maxVolume) maxVolume = v;
+    }
+    let mostActiveCode = '';
+    let mostActiveCount = 0;
+    for (const [code, cnt] of countByJournal.entries()) {
+      if (cnt > mostActiveCount) { mostActiveCount = cnt; mostActiveCode = code; }
+    }
+    return { actifs, total, totalMouvemente, volumeByJournal, countByJournal, maxVolume, mostActiveCode, mostActiveCount };
+  }, [rows, ecritures]);
+
   if (!magasin) {
     return (
       <div className="grid h-full place-items-center p-10 text-center">
@@ -165,58 +202,105 @@ export function JournauxModule({ user, magasin }: Props): React.JSX.Element {
         <p className="text-sm text-muted-foreground">Aucun journal.</p>
       )}
 
+      {/* Rangée KPIs */}
+      {!loading && rows.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 xl:grid-cols-4 mb-6">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">Journaux actifs</div>
+            <div className="text-[22px] font-extrabold leading-tight">{stats.actifs} <span className="text-base font-bold text-muted-foreground">/ {stats.total}</span></div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">Ecritures classees</div>
+            <div className="text-[22px] font-extrabold leading-tight">{ecritures.length}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">Total mouvemente</div>
+            <div className="text-[18px] font-extrabold leading-tight truncate">{fmtFcfa(stats.totalMouvemente)}</div>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground mb-1">Journal le plus actif</div>
+            {stats.mostActiveCode ? (
+              <>
+                <div className="text-[22px] font-extrabold font-mono leading-tight text-primary">{stats.mostActiveCode}</div>
+                <div className="text-[12px] font-semibold text-muted-foreground">{stats.mostActiveCount} ecriture{stats.mostActiveCount !== 1 ? 's' : ''}</div>
+              </>
+            ) : (
+              <div className="text-[15px] font-bold text-muted-foreground">—</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Grille de cartes */}
       {!loading && rows.length > 0 && (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          {rows.map((j) => (
-            <div
-              key={j.id}
-              className="rounded-lg border border-border bg-card shadow-sm px-5 py-[18px]"
-            >
-              <div className="flex items-start gap-[13px]">
-                <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <NotebookText size={22} />
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-[18px] text-primary leading-tight">
-                      {j.code}
-                    </span>
-                    {!j.active && <Badge variant="secondary">Inactif</Badge>}
-                    {j.code === 'AN' && <Badge>Automatique</Badge>}
+          {rows.map((j) => {
+            const count = stats.countByJournal.get(j.code) ?? 0;
+            const volume = stats.volumeByJournal.get(j.code) ?? 0;
+            const pct = Math.round((volume / stats.maxVolume) * 100);
+            return (
+              <div
+                key={j.id}
+                className="rounded-lg border border-border bg-card shadow-sm px-5 py-[18px] flex flex-col gap-3"
+              >
+                <div className="flex items-start gap-[13px]">
+                  <span className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <NotebookText size={22} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono font-bold text-[18px] text-primary leading-tight">
+                        {j.code}
+                      </span>
+                      {!j.active && <Badge variant="secondary">Inactif</Badge>}
+                      {j.code === 'AN' && <Badge>Automatique</Badge>}
+                    </div>
+                    <div className="text-[14px] font-bold text-foreground mt-0.5 truncate">
+                      {j.libelle}
+                    </div>
+                    <div className="text-[12.5px] font-bold text-muted-foreground mt-0.5">
+                      {typeLibelle(j.type)} · {count} ecriture{count !== 1 ? 's' : ''}
+                    </div>
                   </div>
-                  <div className="text-[14px] font-bold text-foreground mt-0.5 truncate">
-                    {j.libelle}
-                  </div>
-                  <div className="text-[12.5px] font-bold text-muted-foreground mt-0.5">
-                    {typeLibelle(j.type)}
+                  <div className="flex items-center gap-1">
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon-sm" aria-label="Actions">
+                            <MoreHorizontal />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40">
+                          <DropdownMenuItem className="gap-2" onClick={() => openEdit(j)}>
+                            <Pencil size={15} /> Modifier
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            className="gap-2"
+                            onClick={() => setToDelete(j)}
+                          >
+                            <Trash2 size={15} /> Supprimer
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    <ChevronRight size={16} className="text-muted-foreground opacity-40 flex-none" />
                   </div>
                 </div>
-                {isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label="Actions">
-                        <MoreHorizontal />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem className="gap-2" onClick={() => openEdit(j)}>
-                        <Pencil size={15} /> Modifier
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        className="gap-2"
-                        onClick={() => setToDelete(j)}
-                      >
-                        <Trash2 size={15} /> Supprimer
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                {/* Volume mouvementé */}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-widest text-muted-foreground">Volume mouvemente</span>
+                    <span className="text-[12px] font-bold text-muted-foreground">{fmtFcfa(volume)}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
