@@ -1,5 +1,5 @@
 import type { Societe, SocieteInput } from '../../../shared/ipc';
-import { query, execute, nextId, sqlValue } from '../../db/connection';
+import { query, execute, insertReturningId, sqlValue } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { societeInputSchema, firstZodError } from '../../../shared/schemas';
 import { AppError } from '../common/errors';
@@ -22,11 +22,11 @@ export async function list(): Promise<Societe[]> {
 export async function create(input: SocieteInput): Promise<Societe> {
   requireAdmin();
   const data = parseSociete(input);
-  const id = await nextId('societes');
-  await execute(
-    `INSERT INTO societes (id, raison_sociale, rccm, adresse, telephone) VALUES (` +
-      `${sqlValue(id)}, ${sqlValue(data.raison_sociale)}, ${sqlValue(data.rccm)}, ` +
+  const id = await insertReturningId(
+    `INSERT INTO societes (raison_sociale, rccm, adresse, telephone) VALUES (` +
+      `${sqlValue(data.raison_sociale)}, ${sqlValue(data.rccm)}, ` +
       `${sqlValue(data.adresse)}, ${sqlValue(data.telephone)})`,
+    'societes',
   );
   return { id, ...data };
 }

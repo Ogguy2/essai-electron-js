@@ -1,5 +1,5 @@
 import type { Compte, CompteInput } from '../../../shared/ipc';
-import { query, execute, nextId, sqlValue } from '../../db/connection';
+import { query, execute, insertReturningId, sqlValue } from '../../db/connection';
 import { requireAdmin } from '../auth';
 import { compteInputSchema, firstZodError } from '../../../shared/schemas';
 import { estAncreCollectif } from '../../../domain/compte';
@@ -36,11 +36,11 @@ export async function create(magasinId: number, input: CompteInput): Promise<Com
   if (await numeroExiste(magasinId, data.numero)) {
     throw new AppError('VALIDATION', 'Ce numéro de compte existe déjà pour ce magasin.');
   }
-  const id = await nextId('comptes');
-  await execute(
-    `INSERT INTO comptes (id, magasin_id, numero, libelle, classe, collectif, lettrable) VALUES (` +
-      `${sqlValue(id)}, ${sqlValue(magasinId)}, ${sqlValue(data.numero)}, ${sqlValue(data.libelle)}, ` +
+  const id = await insertReturningId(
+    `INSERT INTO comptes (magasin_id, numero, libelle, classe, collectif, lettrable) VALUES (` +
+      `${sqlValue(magasinId)}, ${sqlValue(data.numero)}, ${sqlValue(data.libelle)}, ` +
       `${sqlValue(data.classe)}, ${sqlValue(data.collectif)}, ${sqlValue(data.lettrable)})`,
+    'comptes',
   );
   return { id, magasin_id: magasinId, ...data };
 }

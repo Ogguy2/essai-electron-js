@@ -96,14 +96,15 @@ export function sqlValue(v: string | number | boolean | null | undefined): strin
  * fiable hors transaction explicite.
  */
 export async function withTransaction(
-  fn: (run: (sql: string) => Promise<void>) => Promise<void>,
+  fn: (run: <T = unknown>(sql: string) => Promise<T[]>) => Promise<void>,
 ): Promise<void> {
   const p = await getPool();
   const conn = await p.connect();
   try {
     await conn.beginTransaction();
-    await fn(async (sql) => {
-      await conn.query(sql);
+    await fn(async <T = unknown>(sql: string) => {
+      const rows = await conn.query<T>(sql);
+      return Array.from(rows);
     });
     await conn.commit();
   } catch (err) {
@@ -127,11 +128,22 @@ export async function execute(sql: string): Promise<void> {
   });
 }
 
-/** Prochain id pour une table (le schéma n'a pas d'auto-increment). */
-export async function nextId(table: string): Promise<number> {
-  const rows = await query<{ m: number | null }>(`SELECT MAX(id) AS m FROM ${table}`);
-  const max = rows[0]?.m;
-  return (typeof max === 'number' ? max : 0) + 1;
+/**
+ * Insère une ligne SANS `id` (colonne `AUTO_INCREMENT`) et renvoie l'id assigné.
+ *
+ * Le pilote HFSQL/ODBC ne supporte ni `LAST_INSERT_ID()` ni `@@IDENTITY`
+ * (vérifié empiriquement : `scripts/probe-autoincrement.mjs`) ; la seule façon
+ * fiable de récupérer l'id est de relire `MAX(id)` sur la **même** connexion,
+ * dans la même transaction que l'INSERT.
+ */
+export async function insertReturningId(insertSql: string, table: string): Promise<number> {
+  let id = 0;
+  await withTransaction(async (run) => {
+    await run(insertSql);
+    const rows = await run<{ id: number | null }>(`SELECT MAX(id) AS id FROM ${table}`);
+    id = Number(rows[0]?.id ?? 0);
+  });
+  return id;
 }
 
 export async function closePool(): Promise<void> {
