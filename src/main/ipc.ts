@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type ExerciceInput, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
 import * as tiers from './services/tiers';
@@ -88,6 +88,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle(IPC.exercicesList, (_e, magasinId: number) =>
     wrap<Exercice[]>(() => exercices.list(magasinId), 'exercices:list'));
+  ipcMain.handle(IPC.exercicesCreate, (_e, magasinId: number, input: ExerciceInput) =>
+    wrap<Exercice>(() => exercices.create(magasinId, input), 'exercices:create'));
+  ipcMain.handle(IPC.exercicesUpdate, (_e, id: number, input: ExerciceInput) =>
+    wrap<Exercice>(() => exercices.update(id, input), 'exercices:update'));
+  ipcMain.handle(IPC.exercicesClose, (_e, id: number) =>
+    wrap<null>(async () => { await exercices.close(id); return null; }, 'exercices:close'));
+  ipcMain.handle(IPC.exercicesReopen, (_e, id: number) =>
+    wrap<null>(async () => { await exercices.reopen(id); return null; }, 'exercices:reopen'));
 
   ipcMain.handle(IPC.comptesList, (_e, magasinId: number) =>
     wrap<Compte[]>(() => comptes.list(magasinId), 'comptes:list'));

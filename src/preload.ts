@@ -32,6 +32,10 @@ const api: Api = {
   },
   exercices: {
     list: (magasinId) => ipcRenderer.invoke(IPC.exercicesList, magasinId),
+    create: (magasinId, input) => ipcRenderer.invoke(IPC.exercicesCreate, magasinId, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.exercicesUpdate, id, input),
+    close: (id) => ipcRenderer.invoke(IPC.exercicesClose, id),
+    reopen: (id) => ipcRenderer.invoke(IPC.exercicesReopen, id),
   },
   comptes: {
     list: (magasinId) => ipcRenderer.invoke(IPC.comptesList, magasinId),
