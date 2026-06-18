@@ -91,7 +91,7 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-bold">Sociétés</h2>
         {isAdmin && (
-          <Button  size={"lg"} onClick={openCreate}>
+          <Button size="lg" onClick={openCreate}>
             <Plus size={16} /> Nouvelle société 
           </Button>
         )}
@@ -161,8 +161,8 @@ export function SocietesModule({ user, onChanged }: Props): React.JSX.Element {
             {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-            <Button onClick={() => void save()} disabled={saving}>
+            <Button variant="outline" size="lg" onClick={() => setOpen(false)}>Annuler</Button>
+            <Button size="lg" onClick={() => void save()} disabled={saving}>
               {saving ? 'Enregistrement…' : 'Enregistrer'}
             </Button>
           </DialogFooter>
