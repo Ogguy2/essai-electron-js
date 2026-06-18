@@ -13,8 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { PAGE_TITLES, type RouteId } from '@/lib/navigation';
 import { societeById } from '@/lib/mock-data';
-import type { Magasin, Exercice } from '@/shared/ipc';
-import type { AuthUser } from '@/shared/ipc';
+import type { Magasin, Exercice, AuthUser } from '@/shared/ipc';
 
 interface TopbarProps {
   route: RouteId;
