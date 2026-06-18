@@ -51,6 +51,13 @@ const api: Api = {
     update: (id, input) => ipcRenderer.invoke(IPC.tiersUpdate, id, input),
     delete: (id) => ipcRenderer.invoke(IPC.tiersDelete, id),
   },
+  users: {
+    list: () => ipcRenderer.invoke(IPC.usersList),
+    create: (input) => ipcRenderer.invoke(IPC.usersCreate, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.usersUpdate, id, input),
+    setPassword: (id, password) => ipcRenderer.invoke(IPC.usersSetPassword, id, password),
+    delete: (id) => ipcRenderer.invoke(IPC.usersDelete, id),
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

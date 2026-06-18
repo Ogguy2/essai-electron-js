@@ -29,6 +29,9 @@ export type {
   JournalInput,
   Tiers,
   TiersInput,
+  User,
+  UserCreateInput,
+  UserUpdateInput,
   UpdateReadyPayload,
 } from '../types/domain';
 
@@ -48,6 +51,9 @@ import type {
   JournalInput,
   Tiers,
   TiersInput,
+  User,
+  UserCreateInput,
+  UserUpdateInput,
 } from '../types/domain';
 
 /** Noms des canaux IPC (`<module>:<action>`). */
@@ -80,6 +86,11 @@ export const IPC = {
   tiersCreate: 'tiers:create',
   tiersUpdate: 'tiers:update',
   tiersDelete: 'tiers:delete',
+  usersList: 'users:list',
+  usersCreate: 'users:create',
+  usersUpdate: 'users:update',
+  usersSetPassword: 'users:set-password',
+  usersDelete: 'users:delete',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -129,6 +140,13 @@ export interface Api {
     list(magasinId: number): Promise<IpcResult<Tiers[]>>;
     create(magasinId: number, input: TiersInput): Promise<IpcResult<Tiers>>;
     update(id: number, input: TiersInput): Promise<IpcResult<Tiers>>;
+    delete(id: number): Promise<IpcResult<null>>;
+  };
+  users: {
+    list(): Promise<IpcResult<User[]>>;
+    create(input: UserCreateInput): Promise<IpcResult<User>>;
+    update(id: number, input: UserUpdateInput): Promise<IpcResult<User>>;
+    setPassword(id: number, password: string): Promise<IpcResult<null>>;
     delete(id: number): Promise<IpcResult<null>>;
   };
 }

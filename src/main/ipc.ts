@@ -1,8 +1,9 @@
 import { ipcMain } from 'electron';
-import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput } from '../shared/ipc';
+import { IPC, type AuthUser, type IpcResult, type Societe, type Magasin, type Exercice, type SocieteInput, type MagasinInput, type Compte, type CompteInput, type Journal, type JournalInput, type Tiers, type TiersInput, type User, type UserCreateInput, type UserUpdateInput } from '../shared/ipc';
 import * as comptes from './services/comptes';
 import * as journaux from './services/journaux';
 import * as tiers from './services/tiers';
+import * as users from './services/users';
 import { authenticate, logout, currentSession } from './services/auth';
 import { install as installUpdate } from './services/updater';
 import { logError } from './logger';
@@ -114,4 +115,15 @@ export function registerIpcHandlers(): void {
     wrap<Tiers>(() => tiers.update(id, input), 'tiers:update'));
   ipcMain.handle(IPC.tiersDelete, (_e, id: number) =>
     wrap<null>(async () => { await tiers.remove(id); return null; }, 'tiers:delete'));
+
+  ipcMain.handle(IPC.usersList, () =>
+    wrap<User[]>(() => users.list(), 'users:list'));
+  ipcMain.handle(IPC.usersCreate, (_e, input: UserCreateInput) =>
+    wrap<User>(() => users.create(input), 'users:create'));
+  ipcMain.handle(IPC.usersUpdate, (_e, id: number, input: UserUpdateInput) =>
+    wrap<User>(() => users.update(id, input), 'users:update'));
+  ipcMain.handle(IPC.usersSetPassword, (_e, id: number, password: string) =>
+    wrap<null>(async () => { await users.setPassword(id, password); return null; }, 'users:set-password'));
+  ipcMain.handle(IPC.usersDelete, (_e, id: number) =>
+    wrap<null>(async () => { await users.remove(id); return null; }, 'users:delete'));
 }
