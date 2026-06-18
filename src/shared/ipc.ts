@@ -24,6 +24,31 @@ export interface AuthUser {
   role: Role;
 }
 
+export interface Societe {
+  id: number;
+  raison_sociale: string;
+  rccm: string;
+  adresse: string;
+  telephone: string;
+}
+export type SocieteInput = Omit<Societe, 'id'>;
+
+export interface Magasin {
+  id: number;
+  libelle: string;
+  societe_id: number;
+}
+export type MagasinInput = Omit<Magasin, 'id'>;
+
+export interface Exercice {
+  id: number;
+  magasin_id: number;
+  libelle: string;
+  date_debut: string;
+  date_fin: string;
+  statut: 'ouvert' | 'cloture';
+}
+
 /** Charge utile de l'événement « mise à jour téléchargée » (main → renderer). */
 export interface UpdateReadyPayload {
   version: string;
@@ -38,6 +63,15 @@ export const IPC = {
   updateInstall: 'update:install',
   /** main → renderer : une mise à jour est téléchargée et prête à installer. */
   updateReady: 'update:ready',
+  societesList: 'societes:list',
+  societesCreate: 'societes:create',
+  societesUpdate: 'societes:update',
+  societesDelete: 'societes:delete',
+  magasinsList: 'magasins:list',
+  magasinsCreate: 'magasins:create',
+  magasinsUpdate: 'magasins:update',
+  magasinsDelete: 'magasins:delete',
+  exercicesList: 'exercices:list',
 } as const;
 
 /** Surface exposée au renderer via `window.api` (contextBridge). */
@@ -55,5 +89,20 @@ export interface Api {
      * désabonnement à appeler au démontage.
      */
     onReady(callback: (payload: UpdateReadyPayload) => void): () => void;
+  };
+  societes: {
+    list(): Promise<IpcResult<Societe[]>>;
+    create(input: SocieteInput): Promise<IpcResult<Societe>>;
+    update(id: number, input: SocieteInput): Promise<IpcResult<Societe>>;
+    delete(id: number): Promise<IpcResult<null>>;
+  };
+  magasins: {
+    list(): Promise<IpcResult<Magasin[]>>;
+    create(input: MagasinInput): Promise<IpcResult<Magasin>>;
+    update(id: number, input: MagasinInput): Promise<IpcResult<Magasin>>;
+    delete(id: number): Promise<IpcResult<null>>;
+  };
+  exercices: {
+    list(magasinId: number): Promise<IpcResult<Exercice[]>>;
   };
 }
