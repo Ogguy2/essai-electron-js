@@ -60,6 +60,50 @@ export function sqlValue(v: string | number | boolean | null | undefined): strin
   return `'${String(v).replace(/'/g, "''")}'`;
 }
 
+/**
+ * Exécute un bloc de requêtes dans UNE transaction (connexion dédiée).
+ * `run(sql)` exécute une requête sur cette connexion. Commit si tout passe,
+ * rollback sinon. Indispensable : le pilote HFSQL/ODBC ne committe pas de façon
+ * fiable hors transaction explicite.
+ */
+export async function withTransaction(
+  fn: (run: (sql: string) => Promise<void>) => Promise<void>,
+): Promise<void> {
+  const p = await getPool();
+  const conn = await p.connect();
+  try {
+    await conn.beginTransaction();
+    await fn(async (sql) => {
+      await conn.query(sql);
+    });
+    await conn.commit();
+  } catch (err) {
+    try {
+      await conn.rollback();
+    } catch {
+      /* rollback best-effort */
+    }
+    logError('db.withTransaction', err);
+    throw err;
+  } finally {
+    await conn.close();
+  }
+}
+
+/** Exécute une seule requête d'écriture en la committant (via transaction). */
+export async function execute(sql: string): Promise<void> {
+  await withTransaction(async (run) => {
+    await run(sql);
+  });
+}
+
+/** Prochain id pour une table (le schéma n'a pas d'auto-increment). */
+export async function nextId(table: string): Promise<number> {
+  const rows = await query<{ m: number | null }>(`SELECT MAX(id) AS m FROM ${table}`);
+  const max = rows[0]?.m;
+  return (typeof max === 'number' ? max : 0) + 1;
+}
+
 export async function closePool(): Promise<void> {
   if (pool) {
     await pool.close();
