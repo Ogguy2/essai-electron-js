@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import type { AuthUser, Role } from '../../shared/ipc';
 import { findByUsername } from './user-store';
+import { AppError } from './errors';
 
 /**
  * Service d'authentification (processus principal uniquement).
@@ -37,4 +38,12 @@ export function logout(): void {
 
 export function currentSession(): AuthUser | null {
   return currentUser;
+}
+
+/** Lève AppError('FORBIDDEN') si l'utilisateur courant n'est pas Admin. */
+export function requireAdmin(): void {
+  const u = currentSession();
+  if (!u || u.role !== 'Admin') {
+    throw new AppError('FORBIDDEN', "Action réservée à l'administrateur.");
+  }
 }
