@@ -5,10 +5,19 @@ import { logError } from '../../logger';
 
 /**
  * Service de mise à jour automatique (processus principal uniquement).
- * Vérifie un flux `generic` (serveur HTTP/S3) au démarrage, télécharge en arrière-plan,
- * puis notifie le renderer quand une mise à jour est prête à installer.
- * L'URL du flux est lue depuis `.env` (`UPDATE_FEED_URL`) — configurable sans rebuild.
+ * Vérifie les releases GitHub au démarrage, télécharge en arrière-plan, puis
+ * notifie le renderer quand une mise à jour est prête à installer.
+ *
+ * Par défaut : provider **github** (releases du dépôt public — détecte
+ * automatiquement la dernière version, gère le renommage espaces→points des
+ * assets, ne dépend d'aucun `.env`). Si `UPDATE_FEED_URL` est défini, on
+ * bascule sur un flux `generic` (serveur HTTP/S3) — utile pour un hébergement
+ * privé.
  */
+
+// Dépôt GitHub hébergeant les releases (assets + latest.yml).
+const GITHUB_OWNER = 'Ogguy2';
+const GITHUB_REPO = 'essai-electron-js';
 
 let targetWindow: BrowserWindow | null = null;
 
@@ -17,19 +26,19 @@ let targetWindow: BrowserWindow | null = null;
  * À n'appeler qu'en version packagée (electron-updater lève en dev).
  */
 export function init(win: BrowserWindow): void {
-  const url = process.env.UPDATE_FEED_URL;
-  if (!url) {
-    console.warn('[updater] UPDATE_FEED_URL absent — mises à jour désactivées.');
-    return;
-  }
-
   targetWindow = win;
 
   // Téléchargement auto en arrière-plan ; installation différée au prochain quit
   // si l'utilisateur ne redémarre pas tout de suite.
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.setFeedURL({ provider: 'generic', url });
+
+  const url = process.env.UPDATE_FEED_URL;
+  if (url) {
+    autoUpdater.setFeedURL({ provider: 'generic', url });
+  } else {
+    autoUpdater.setFeedURL({ provider: 'github', owner: GITHUB_OWNER, repo: GITHUB_REPO });
+  }
 
   autoUpdater.on('update-downloaded', (info) => {
     const payload: UpdateReadyPayload = { version: info.version };
