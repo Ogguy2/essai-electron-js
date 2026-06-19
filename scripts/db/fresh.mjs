@@ -27,6 +27,5 @@ async function main() {
 
 main().catch((e) => {
   console.error('Échec db:fresh :', e.message);
-  if (e.odbcErrors) console.error(JSON.stringify(e.odbcErrors));
   process.exit(1);
 });

@@ -93,6 +93,12 @@ typings/
 # Electron-Forge
 out/
 
+# Base SQLite locale (dev) + fichiers WAL/SHM — données locales, non versionnées
+.data/
+*.db
+*.db-wal
+*.db-shm
+
 # Sortie du `vite build` de validation hors Electron (vite.config.mts)
 dist/
 

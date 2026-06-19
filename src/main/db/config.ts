@@ -1,37 +1,23 @@
 /**
- * Configuration de connexion HFSQL (processus principal uniquement).
- * Les valeurs viennent des variables d'environnement (fichier `.env`, chargé via
- * `dotenv` au démarrage du main). Aucun identifiant n'est exposé au renderer.
+ * Résolution de l'emplacement de la base SQLite (processus principal).
+ *
+ * Priorité :
+ *   1. `SQLITE_PATH` (variable d'env) — utile en dev et pour les scripts `db:*`,
+ *      afin que l'app et les seeders pointent vers le MÊME fichier.
+ *   2. App packagée → dossier `userData` de l'utilisateur (stockage durable).
+ *   3. Dev (non packagée) → `.data/sicocompte.db` à la racine du projet.
+ *
+ * Aucun identifiant à exposer : SQLite est un simple fichier local.
  */
+import { app } from 'electron';
+import * as path from 'node:path';
 
-export interface HfsqlConfig {
-  driver: string;
-  host: string;
-  port: string;
-  database: string;
-  user: string;
-  password: string;
-}
-
-export function getHfsqlConfig(): HfsqlConfig {
-  return {
-    driver: process.env.HFSQL_DRIVER ?? 'HFSQL',
-    host: process.env.HFSQL_HOST ?? '127.0.0.1',
-    port: process.env.HFSQL_PORT ?? '4900',
-    database: process.env.HFSQL_DATABASE ?? 'sicocompte',
-    user: process.env.HFSQL_USER ?? 'admin',
-    password: process.env.HFSQL_PASSWORD ?? '',
-  };
-}
-
-/** Chaîne de connexion ODBC DSN-less pour le pilote HFSQL. */
-export function buildDsn(c: HfsqlConfig): string {
-  return [
-    `DRIVER={${c.driver}};`,
-    `Server Name=${c.host};`,
-    `Server Port=${c.port};`,
-    `Database=${c.database};`,
-    `UID=${c.user};`,
-    `PWD=${c.password};`,
-  ].join('');
+export function resolveDbPath(): string {
+  if (process.env.SQLITE_PATH) return process.env.SQLITE_PATH;
+  try {
+    if (app?.isPackaged) return path.join(app.getPath('userData'), 'sicocompte.db');
+  } catch {
+    /* `app` indisponible (contexte hors Electron) → repli dev ci-dessous */
+  }
+  return path.join(process.cwd(), '.data', 'sicocompte.db');
 }

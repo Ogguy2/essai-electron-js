@@ -1,5 +1,5 @@
 # Config electron-builder — UNIQUEMENT pour produire l'installeur NSIS.
-# Le build de l'app (Vite main/preload/renderer, fuses, ASAR, natif odbc dépaqueté)
+# Le build de l'app (Vite main/preload/renderer, fuses, ASAR, natif better-sqlite3 dépaqueté)
 # reste géré par Electron Forge. On applique electron-builder en mode `--prepackaged`
 # sur le dossier déjà packagé par Forge (out/SicoCompte-win32-x64), donc il ne
 # rebuild ni ne re-signe rien — il emballe juste en installeur Windows classique.

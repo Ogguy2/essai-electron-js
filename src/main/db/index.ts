@@ -1,19 +1,19 @@
-import { getPool } from './connection';
+import { getDb } from './connection';
 import { logInfo, logError } from '../logger';
 
 /**
- * Initialise la connexion HFSQL au démarrage (non bloquant).
- * Les tables sont créées manuellement dans le Centre de contrôle HFSQL à partir
- * des scripts `db/schema/*.sql` — l'application ne fait que lire/écrire dedans.
+ * Initialise la base SQLite au démarrage. Ouvre le fichier et garantit le
+ * schéma (DDL idempotent, cf. `schema.ts`). Les données de démo sont, elles,
+ * insérées via les commandes `db:seed` / `db:fresh`.
  */
 export async function bootstrapDatabase(): Promise<void> {
-  logInfo('db.bootstrap', 'tentative de connexion HFSQL');
+  logInfo('db.bootstrap', 'ouverture de la base SQLite');
   try {
-    await getPool();
-    console.log('[db] Connexion HFSQL établie.');
-    logInfo('db.bootstrap', 'Connexion HFSQL établie.');
+    getDb();
+    console.log('[db] Base SQLite prête.');
+    logInfo('db.bootstrap', 'Base SQLite prête.');
   } catch (err) {
-    console.error('[db] Connexion HFSQL impossible :', (err as Error).message);
+    console.error('[db] Ouverture SQLite impossible :', (err as Error).message);
     logError('db.bootstrap', err);
   }
 }

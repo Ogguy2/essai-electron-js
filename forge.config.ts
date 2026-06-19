@@ -12,12 +12,13 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     // Le plugin Vite force par défaut `ignore` à tout exclure sauf `/.vite`,
-    // ce qui laisse `node_modules` HORS du package. Or `odbc` est natif (non
-    // bundlé, marqué `external`) : il doit être présent au runtime, avec son
-    // arbre de deps prod (@mapbox/node-pre-gyp, async…). On fournit donc notre
-    // propre `ignore` (respecté par le plugin) qui garde `.vite`, le manifeste
-    // et `node_modules` ; `prune: true` (défaut) retire les devDependencies.
-    // `auto-unpack-natives` sort ensuite le binaire .node de l'asar.
+    // ce qui laisse `node_modules` HORS du package. Or `better-sqlite3` est
+    // natif (non bundlé, marqué `external`) : il doit être présent au runtime,
+    // avec son arbre de deps prod (bindings, prebuild-install…). On fournit donc
+    // notre propre `ignore` (respecté par le plugin) qui garde `.vite`, le
+    // manifeste et `node_modules` ; `prune: true` (défaut) retire les
+    // devDependencies. `auto-unpack-natives` sort ensuite le binaire .node de
+    // l'asar (sinon Electron lève « Cannot find module 'better-sqlite3' »).
     ignore: (file: string) => {
       if (!file) return false;
       if (file.startsWith('/.vite')) return false;
@@ -34,9 +35,9 @@ const config: ForgeConfig = {
     new MakerDeb({}),
   ],
   plugins: [
-    // Dépaquète les modules natifs (.node, ex. `odbc`) hors de l'app.asar vers
-    // app.asar.unpacked/ — sinon Electron ne peut pas charger le binaire et
-    // lève « Cannot find module 'odbc' » dans le main au démarrage.
+    // Dépaquète les modules natifs (.node, ex. `better-sqlite3`) hors de
+    // l'app.asar vers app.asar.unpacked/ — sinon Electron ne peut pas charger
+    // le binaire et lève « Cannot find module » dans le main au démarrage.
     new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

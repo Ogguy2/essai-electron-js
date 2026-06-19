@@ -27,7 +27,6 @@ async function main() {
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((e) => {
     console.error('Échec db:seed :', e.message);
-    if (e.odbcErrors) console.error(JSON.stringify(e.odbcErrors));
     process.exit(1);
   });
 }

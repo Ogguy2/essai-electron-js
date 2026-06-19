@@ -1,152 +1,142 @@
-import * as odbc from 'odbc';
-import { buildDsn, getHfsqlConfig } from './config';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import BetterSqlite3 from 'better-sqlite3';
+import { resolveDbPath } from './config';
+import { ensureSchema } from './schema';
+import { ensureDefaultUsers } from './seed';
 import { logInfo, logError } from '../logger';
-import { deaccent } from '../../domain/text';
 
 /**
- * Couche d'accès données HFSQL (ODBC) — UNIQUE point de contact avec la base.
+ * Couche d'accès données SQLite (better-sqlite3) — UNIQUE point de contact avec
+ * la base. Remplace l'ancien accès HFSQL/ODBC.
  *
- * ⚠️ Le pilote ODBC HFSQL ne supporte pas les requêtes paramétrées (`?`) via
- * node-odbc (il renvoie un nombre de marqueurs erroné). On construit donc le SQL
- * avec des valeurs **inlinées et échappées** via `sqlValue()` (anti-injection).
+ * better-sqlite3 est **synchrone**. On conserve néanmoins des signatures `async`
+ * (Promise) pour garder l'API historique : les 12 services et l'IPC restent
+ * inchangés. Comme aucune opération ne fait réellement d'I/O asynchrone, une
+ * transaction ouverte par `withTransaction` se termine dans la même phase de
+ * micro-tâches — aucune autre requête IPC ne peut s'y intercaler.
  */
 
-let pool: odbc.Pool | null = null;
+let db: BetterSqlite3.Database | null = null;
 
-/** Extrait le détail HFSQL réel d'une erreur node-odbc (sinon message générique). */
-function odbcDetail(err: unknown): string {
-  const e = err as { odbcErrors?: Array<{ state?: string; code?: number; message?: string }> };
-  if (Array.isArray(e?.odbcErrors) && e.odbcErrors.length) {
-    return e.odbcErrors.map((o) => `[${o.state ?? ''} ${o.code ?? ''}] ${o.message ?? ''}`).join(' | ');
+/** Ouvre (paresseusement) la base SQLite et garantit le schéma. */
+export function getDb(): BetterSqlite3.Database {
+  if (!db) {
+    const file = resolveDbPath();
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    logInfo('db.getDb', `ouverture SQLite : ${file}`);
+    db = new BetterSqlite3(file);
+    db.pragma('journal_mode = WAL'); // meilleures perfs + lectures concurrentes
+    db.pragma('foreign_keys = ON');
+    ensureSchema(db);
+    ensureDefaultUsers(db); // premier lancement : crée admin + comptable si base vide
+    logInfo('db.getDb', 'base SQLite ouverte (schéma garanti)');
   }
-  return (err as Error)?.message ?? String(err);
+  return db;
 }
 
-export async function getPool(): Promise<odbc.Pool> {
-  if (!pool) {
-    // Petit pool : app desktop mono-utilisateur. Limite les connexions ouvertes
-    // sur le serveur HFSQL.
-    logInfo('db.getPool', 'tentative de connexion HFSQL (ouverture du pool ODBC)');
-    try {
-      pool = await odbc.pool({
-        connectionString: buildDsn(getHfsqlConfig()),
-        initialSize: 1,
-        maxSize: 4,
-      });
-      logInfo('db.getPool', 'pool ODBC HFSQL ouvert avec succès');
-    } catch (err) {
-      logError('db.getPool', err);
-      throw err;
-    }
-  }
-  return pool;
+/**
+ * Exécute une instruction SQL et renvoie les lignes.
+ * `Statement.reader` vaut `true` pour les requêtes qui renvoient des données
+ * (SELECT…) → on `all()` ; sinon on `run()` (INSERT/UPDATE/DELETE) et on
+ * renvoie un tableau vide. Permet d'utiliser le même helper pour tout.
+ */
+function runSql<T = unknown>(d: BetterSqlite3.Database, sql: string): T[] {
+  const stmt = d.prepare(sql);
+  if (stmt.reader) return stmt.all() as T[];
+  stmt.run();
+  return [];
 }
 
-/** Exécute une requête SQL (valeurs déjà inlinées via sqlValue) et renvoie les lignes. */
+/** Exécute une requête SQL (valeurs inlinées via sqlValue) et renvoie les lignes. */
 export async function query<T = unknown>(sql: string): Promise<T[]> {
-  const p = await getPool();
   try {
-    const rows = await p.query<T>(sql);
-    return Array.from(rows);
+    return runSql<T>(getDb(), sql);
   } catch (err) {
-    // Contexte SQL volontairement tronqué (~80 car.) pour éviter de consigner
-    // d'éventuels INSERT contenant des hachages de mots de passe.
     const sqlPrefix = sql.slice(0, 120);
-    console.error(`[db.query] ${odbcDetail(err)}\n  SQL: ${sqlPrefix}`);
+    console.error(`[db.query] ${(err as Error).message}\n  SQL: ${sqlPrefix}`);
     logError('db.query', err);
     logInfo('db.query', `échec sur SQL: ${sqlPrefix}`);
-    // On relance : les appelants gèrent toujours l'erreur eux-mêmes.
     throw err;
   }
 }
 
 /**
  * Échappe une valeur pour l'inclure directement dans une instruction SQL.
- * Indispensable faute de paramètres `?` (cf. note ci-dessus).
  *
- * ⚠️ Encodage HFSQL/ODBC : node-odbc relit en UTF-8 des octets ANSI → les
- * caractères accentués deviennent « � » (perte), et on ne peut pas passer les
- * colonnes en Unicode. On **dé-accentue donc toute chaîne à l'écriture**
- * (`deaccent`) → tout est stocké en ASCII pur, correct dans l'app ET dans le
- * Centre de contrôle. Sans effet sur l'ASCII (statut, dates, numéros, hash…).
- * La mise en MAJUSCULES du texte humain est faite en amont, dans les services.
+ * Conservé pour rester compatible avec les services existants (qui composent du
+ * SQL textuel). SQLite supporte les vraies requêtes paramétrées, mais on garde
+ * l'inlining échappé pour ne pas réécrire toute la couche. Contrairement à
+ * HFSQL, **plus de dé-accentuation** : SQLite stocke l'UTF-8 nativement, les
+ * accents sont préservés.
  */
 export function sqlValue(v: string | number | boolean | null | undefined): string {
   if (v === null || v === undefined) return 'NULL';
   if (typeof v === 'number') return Number.isFinite(v) ? String(v) : 'NULL';
   if (typeof v === 'boolean') return v ? '1' : '0';
-  return `'${deaccent(String(v)).replace(/'/g, "''")}'`;
+  return `'${String(v).replace(/'/g, "''")}'`;
 }
 
 /**
- * Normalise un BOOLEAN HFSQL en `boolean` JS. node-odbc renvoie les BOOLEAN
- * HFSQL en **nombre** (1/0) → à convertir avant de servir au renderer (les
- * schémas zod attendent un vrai `boolean`).
+ * Normalise un BOOLEAN stocké (INTEGER 0/1) en `boolean` JS. Les schémas zod
+ * côté renderer attendent un vrai `boolean`.
  */
 export function toBool(v: unknown): boolean {
   return v === true || v === 1 || v === '1';
 }
 
 /**
- * Exécute un bloc de requêtes dans UNE transaction (connexion dédiée).
- * `run(sql)` exécute une requête sur cette connexion. Commit si tout passe,
- * rollback sinon. Indispensable : le pilote HFSQL/ODBC ne committe pas de façon
- * fiable hors transaction explicite.
+ * Exécute un bloc de requêtes dans UNE transaction.
+ * `run(sql)` exécute une requête. Commit si tout passe, rollback sinon.
+ * (better-sqlite3 étant synchrone, le callback `async` se déroule sans yield
+ * réel — la transaction est atomique vis-à-vis des autres appels IPC.)
  */
 export async function withTransaction(
   fn: (run: <T = unknown>(sql: string) => Promise<T[]>) => Promise<void>,
 ): Promise<void> {
-  const p = await getPool();
-  const conn = await p.connect();
+  const d = getDb();
+  d.exec('BEGIN');
   try {
-    await conn.beginTransaction();
-    await fn(async <T = unknown>(sql: string) => {
-      const rows = await conn.query<T>(sql);
-      return Array.from(rows);
-    });
-    await conn.commit();
+    await fn(async <T = unknown>(sql: string) => runSql<T>(d, sql));
+    d.exec('COMMIT');
   } catch (err) {
     try {
-      await conn.rollback();
+      d.exec('ROLLBACK');
     } catch {
       /* rollback best-effort */
     }
-    console.error(`[db.withTransaction] ${odbcDetail(err)}`);
+    console.error(`[db.withTransaction] ${(err as Error).message}`);
     logError('db.withTransaction', err);
     throw err;
-  } finally {
-    await conn.close();
   }
 }
 
-/** Exécute une seule requête d'écriture en la committant (via transaction). */
+/** Exécute une seule requête d'écriture. */
 export async function execute(sql: string): Promise<void> {
-  await withTransaction(async (run) => {
-    await run(sql);
-  });
+  try {
+    runSql(getDb(), sql);
+  } catch (err) {
+    console.error(`[db.execute] ${(err as Error).message}\n  SQL: ${sql.slice(0, 120)}`);
+    logError('db.execute', err);
+    throw err;
+  }
 }
 
 /**
- * Insère une ligne SANS `id` (colonne `AUTO_INCREMENT`) et renvoie l'id assigné.
- *
- * Le pilote HFSQL/ODBC ne supporte ni `LAST_INSERT_ID()` ni `@@IDENTITY`
- * (vérifié empiriquement : `scripts/probe-autoincrement.mjs`) ; la seule façon
- * fiable de récupérer l'id est de relire `MAX(id)` sur la **même** connexion,
- * dans la même transaction que l'INSERT.
+ * Insère une ligne SANS `id` (colonne AUTOINCREMENT) et renvoie l'id assigné.
+ * SQLite expose `lastInsertRowid` de façon fiable (plus besoin du repli
+ * `MAX(id)` qu'imposait HFSQL/ODBC). Le paramètre `table` est conservé pour
+ * compatibilité d'appel mais n'est plus utilisé.
  */
-export async function insertReturningId(insertSql: string, table: string): Promise<number> {
-  let id = 0;
-  await withTransaction(async (run) => {
-    await run(insertSql);
-    const rows = await run<{ id: number | null }>(`SELECT MAX(id) AS id FROM ${table}`);
-    id = Number(rows[0]?.id ?? 0);
-  });
-  return id;
+export async function insertReturningId(insertSql: string, _table?: string): Promise<number> {
+  const info = getDb().prepare(insertSql).run();
+  return Number(info.lastInsertRowid);
 }
 
+/** Ferme la base (appelé à la fermeture de l'app). */
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.close();
-    pool = null;
+  if (db) {
+    db.close();
+    db = null;
   }
 }
