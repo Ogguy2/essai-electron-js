@@ -7,6 +7,7 @@
  * restent hors mouvements (utile pour démontrer le plan comptable).
  */
 import { sqlStr, toAsciiUpper, sqlStrOrNull, insertGetId } from '../lib.mjs';
+import { DEMO_TIERS } from './tiers.mjs';
 
 /** Fabrique une ligne d'écriture de démo. */
 const L = (compte, debit, credit, opts = {}) => ({
@@ -144,16 +145,135 @@ export const DEMO_ECRITURES = [
   ],
 ];
 
+/** Nombre d'écritures visé par magasin (4 magasins → ~1000 écritures). */
+export const ECRITURES_PAR_MAGASIN = 250;
+
+// --- Générateur déterministe d'écritures (volume de démonstration) ---
+
+/** PRNG (LCG) déterministe → données reproductibles à chaque seed. */
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}
+const pick = (rng, arr) => arr[Math.floor(rng() * arr.length)];
+/** Montant HT, multiple de 10 000 (TVA 18 % entière). */
+const montantHT = (rng, min, span) => (min + Math.floor(rng() * span)) * 10000;
+/** Ajoute des jours à une date ISO 'AAAA-MM-JJ'. */
+function addDays(iso, days) {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Génère `count` écritures équilibrées (partie double, TVA 18 %) réparties sur
+ * l'année, mêlant ventes/achats à crédit (paires facture→règlement lettrées),
+ * ventes comptant, charges externes et paies. `seed` rend la sortie reproductible.
+ */
+export function genEcritures(year, count, seed) {
+  const rng = makeRng(seed);
+  const clients = DEMO_TIERS.filter((t) => t.est_client).map((t) => t.code);
+  const fournisseurs = DEMO_TIERS.filter((t) => t.est_fournisseur).map((t) => t.code);
+  const seq = {};
+  const ref = (j) => { seq[j] = (seq[j] ?? 100) + 1; return `${j}-${year}-${String(seq[j]).padStart(4, '0')}`; };
+  const fin = `${year}-12-28`;
+  const clamp = (d) => (d > fin ? fin : d);
+
+  let date = `${year}-01-02`;
+  let lettr = 0;
+  const out = [];
+
+  function step() {
+    date = clamp(addDays(date, Math.floor(rng() * 3))); // +0..2 jours
+    const r = rng();
+
+    if (r < 0.30) {
+      // Vente à crédit (réglée ~70 % → paire lettrée)
+      const c = pick(rng, clients);
+      const ht = montantHT(rng, 5, 46), tva = (ht * 0.18) | 0, ttc = ht + tva;
+      const paye = rng() < 0.7;
+      const code = paye ? `L${String(++lettr).padStart(4, '0')}` : null;
+      out.push({ ref: ref('VTE'), journal: 'VTE', date, libelle: `Vente a credit ${c}`, statut: 'validee', lines: [
+        L('4111', ttc, 0, { tiers: c, libelle: `Client ${c}`, echeance: addDays(date, 30), lettrage: code }),
+        L('701', 0, ht, { libelle: 'Ventes marchandises' }),
+        L('4431', 0, tva, { libelle: 'TVA collectee 18%' }),
+      ] });
+      if (paye) {
+        out.push({ ref: ref('BANQ'), journal: 'BANQ', date: clamp(addDays(date, 15 + Math.floor(rng() * 30))), libelle: `Reglement client ${c}`, statut: 'validee', lines: [
+          L('521', ttc, 0, { libelle: 'Virement recu' }),
+          L('4111', 0, ttc, { tiers: c, libelle: `Client ${c}`, lettrage: code }),
+        ] });
+      }
+    } else if (r < 0.50) {
+      // Vente comptant (caisse)
+      const ht = montantHT(rng, 2, 20), tva = (ht * 0.18) | 0, ttc = ht + tva;
+      out.push({ ref: ref('CAI'), journal: 'CAI', date, libelle: 'Recette caisse - ventes comptant', statut: 'validee', lines: [
+        L('571', ttc, 0, { libelle: 'Especes encaissees' }),
+        L('701', 0, ht, { libelle: 'Ventes comptant' }),
+        L('4431', 0, tva, { libelle: 'TVA collectee 18%' }),
+      ] });
+    } else if (r < 0.78) {
+      // Achat à crédit (réglé ~65 % → paire lettrée)
+      const f = pick(rng, fournisseurs);
+      const ht = montantHT(rng, 4, 40), tva = (ht * 0.18) | 0, ttc = ht + tva;
+      const paye = rng() < 0.65;
+      const code = paye ? `L${String(++lettr).padStart(4, '0')}` : null;
+      out.push({ ref: ref('ACHT'), journal: 'ACHT', date, libelle: `Achat ${f}`, statut: 'validee', lines: [
+        L('601', ht, 0, { libelle: 'Achat marchandises' }),
+        L('4452', tva, 0, { libelle: 'TVA recuperable 18%' }),
+        L('4011', 0, ttc, { tiers: f, libelle: `Fournisseur ${f}`, echeance: addDays(date, 30), lettrage: code }),
+      ] });
+      if (paye) {
+        out.push({ ref: ref('BANQ'), journal: 'BANQ', date: clamp(addDays(date, 20 + Math.floor(rng() * 25))), libelle: `Reglement fournisseur ${f}`, statut: 'validee', lines: [
+          L('4011', ttc, 0, { tiers: f, libelle: `Fournisseur ${f}`, lettrage: code }),
+          L('521', 0, ttc, { libelle: 'Virement emis' }),
+        ] });
+      }
+    } else if (r < 0.90) {
+      // Charge externe (~15 % en brouillon)
+      const cpt = pick(rng, ['6052', '622', '627', '631']);
+      const lbl = { 6052: 'Electricite magasin', 622: 'Loyer magasin', 627: 'Publicite & marketing', 631: 'Frais bancaires' }[cpt];
+      const ht = montantHT(rng, 1, 20), tva = (ht * 0.18) | 0, ttc = ht + tva;
+      out.push({ ref: ref('OD'), journal: 'OD', date, libelle: lbl, statut: rng() < 0.15 ? 'brouillon' : 'validee', lines: [
+        L(cpt, ht, 0, { libelle: lbl }),
+        L('4452', tva, 0, { libelle: 'TVA recuperable' }),
+        L('521', 0, ttc, { libelle: 'Reglement' }),
+      ] });
+    } else {
+      // Paie du personnel
+      const brut = montantHT(rng, 20, 60), cnps = (brut * 0.18) | 0;
+      out.push({ ref: ref('OD'), journal: 'OD', date, libelle: 'Paie du personnel', statut: 'validee', lines: [
+        L('661', brut, 0, { libelle: 'Salaires bruts' }),
+        L('664', cnps, 0, { libelle: 'Charges sociales CNPS' }),
+        L('421', 0, brut, { libelle: 'Net a payer personnel' }),
+        L('447', 0, cnps, { libelle: 'Cotisations dues' }),
+      ] });
+    }
+  }
+
+  while (out.length < count) step();
+  return out.slice(0, count);
+}
+
 /**
  * Seede les écritures de démo d'un magasin si aucune n'existe et qu'un exercice
- * est disponible. Renvoie le nb d'écritures insérées.
+ * est disponible. Ancres curées (à-nouveaux + exemples lettrés) complétées par
+ * des écritures générées jusqu'à ECRITURES_PAR_MAGASIN. Renvoie le nb inséré.
  */
 export async function seedEcritures(conn, magasinId, exerciceId, demoIndex) {
   if (!exerciceId) return 0;
   const rows = await conn.query(`SELECT COUNT(*) AS n FROM ecritures WHERE magasin_id = ${Number(magasinId)}`);
   if (Number(rows?.[0]?.n ?? 0) > 0) return 0;
 
-  const list = DEMO_ECRITURES[demoIndex] ?? [];
+  // Ancres curées (2 jeux Marcory/Ena, cyclés) + complément généré.
+  const curated = DEMO_ECRITURES[demoIndex] ?? DEMO_ECRITURES[demoIndex % DEMO_ECRITURES.length] ?? [];
+  const year = new Date().getFullYear();
+  const generated = genEcritures(year, Math.max(0, ECRITURES_PAR_MAGASIN - curated.length), 1000 + demoIndex);
+  const list = [...curated, ...generated];
+
   for (const e of list) {
     const validee = e.statut === 'validee';
     const ecrId = await insertGetId(

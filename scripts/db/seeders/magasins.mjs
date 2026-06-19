@@ -5,10 +5,14 @@
  */
 import { sqlStr, toAsciiUpper, insertGetId, tableCount } from '../lib.mjs';
 
-/** Magasins de démonstration (societeIndex = index dans DEMO_SOCIETES). */
+/** Magasins de démonstration : 2 par société (societeIndex = index dans DEMO_SOCIETES). */
 export const DEMO_MAGASINS = [
+  // Société 0 — SICONEX SARL
   { libelle: 'Siconex - Marcory', societeIndex: 0 },
   { libelle: 'Siconex - Ena', societeIndex: 0 },
+  // Société 1 — SICONEX DISTRIBUTION SARL
+  { libelle: 'Siconex Distribution - Yopougon', societeIndex: 1 },
+  { libelle: 'Siconex Distribution - Cocody', societeIndex: 1 },
 ];
 
 /** Crée l'exercice de l'année courante (ouvert) et renvoie son id. */

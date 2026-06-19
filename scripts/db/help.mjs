@@ -7,11 +7,12 @@ Commandes base de données (DML uniquement)
                       (lecture seule)
 
   npm run db:seed     Insère les données de démo via des seeders séparés par
-                      entité (scripts/db/seeders/) : sociétés, magasins+exercice,
-                      plan comptable (117 comptes), journaux, tiers et écritures.
-                      Idempotent : re-seede les comptes (corrige l'encodage) et
-                      complète tiers/écritures s'ils sont absents, sans écraser
-                      de données saisies.
+                      entité (scripts/db/seeders/) : utilisateurs (admin &
+                      comptable, mdp « siconex »), 2 sociétés, 2 magasins par
+                      société (+ exercice), plan comptable (117 comptes), journaux,
+                      tiers et écritures. Idempotent : re-seede les comptes (corrige
+                      l'encodage), upsert des utilisateurs, complète tiers/écritures
+                      s'ils sont absents, sans écraser de données saisies.
 
   npm run db:fresh    « Refresh » : vide les tables de données (comptes, exercices,
                       magasins, sociétés) puis relance db:seed. NE touche pas à
