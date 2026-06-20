@@ -90,10 +90,8 @@ typings/
 # Fichiers temporaires de chargement de config Vite (.mts/.ts -> .mjs)
 *.timestamp-*.mjs
 
-# Electron-Forge
-out/
-out-test/
-out-test*/
+# Electron-Forge — tous les dossiers de sortie de build (out/, out-test*/, out-build*/…)
+out*/
 # Dossiers de build/release mis de côté manuellement (installeurs)
 release-v*/
 # Base SQLite locale (dev) + fichiers WAL/SHM — données locales, non versionnées
