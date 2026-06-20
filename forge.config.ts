@@ -9,6 +9,9 @@ import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
+  // Dossier de sortie du packaging. Surchageable via `FORGE_OUT_DIR` (utile si
+  // le dossier `out/` par défaut est verrouillé par un handle système Windows).
+  outDir: process.env.FORGE_OUT_DIR ?? 'out',
   packagerConfig: {
     asar: true,
     // Le plugin Vite force par défaut `ignore` à tout exclure sauf `/.vite`,
