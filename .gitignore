@@ -92,7 +92,10 @@ typings/
 
 # Electron-Forge
 out/
-
+out-test/
+out-test*/
+# Dossiers de build/release mis de côté manuellement (installeurs)
+release-v*/
 # Base SQLite locale (dev) + fichiers WAL/SHM — données locales, non versionnées
 .data/
 *.db
