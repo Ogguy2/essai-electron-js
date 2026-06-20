@@ -16,14 +16,18 @@ win:
     - nsis
 
 # Fait générer le fichier de métadonnées `latest.yml` (lu par electron-updater côté
-# client) en plus de Setup.exe + .blockmap. À déposer tel quel sur le serveur de MAJ.
-# NB : l'URL réelle du flux est fixée au runtime via UPDATE_FEED_URL (.env) ; la valeur
-# ci-dessous ne sert qu'à déclencher la génération de latest.yml — ajuster si besoin.
+# client) en plus de Setup.exe + .blockmap. Provider github : cohérent avec
+# `resources/app-update.yml` (généré par le hook Forge) que lit le client.
 publish:
-  provider: generic
-  url: https://updates.example.com/sicocompte/
+  provider: github
+  owner: Ogguy2
+  repo: essai-electron-js
 
 nsis:
+  # IMPÉRATIF : nom d'installeur SANS espaces. GitHub remplace les espaces des
+  # assets par des points, alors qu'electron-updater les cherche avec des tirets
+  # → 404 au téléchargement de la MAJ. Des tirets partout évitent l'ambiguïté.
+  artifactName: ${productName}-Setup-${version}.${ext}
   # oneClick:false → vrai assistant (Bienvenue → Dossier → Installation → Terminer)
   oneClick: false
   # Laisse l'utilisateur choisir le dossier d'installation
