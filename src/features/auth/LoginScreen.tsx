@@ -11,6 +11,7 @@ import {
   Scale,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import {
   InputGroup,
   InputGroupAddon,
@@ -62,70 +63,61 @@ export function LoginScreen({ onLogin }: LoginScreenProps): React.JSX.Element {
   }
 
   return (
-    <div className="grid h-screen grid-cols-1 md:grid-cols-[1.05fr_1fr]">
-      {/* Panneau de marque (gauche) */}
+    <div
+      className="relative grid min-h-screen place-items-center overflow-hidden p-6"
+      style={{
+        background:
+          'linear-gradient(158deg, oklch(0.982 0.004 250) 0%, oklch(0.958 0.010 250) 100%)',
+      }}
+    >
+      {/* halo décoratif (fond de page) */}
       <div
-        className="relative hidden flex-col justify-between overflow-hidden border-r border-border md:flex"
+        className="pointer-events-none absolute inset-0"
         style={{
-          padding: '44px 52px',
           background:
-            'linear-gradient(158deg, oklch(0.982 0.004 250) 0%, oklch(0.958 0.010 250) 100%)',
+            'radial-gradient(900px 520px at 82% -10%, oklch(0.605 0.108 252 / 0.14), transparent 60%), radial-gradient(680px 460px at 2% 112%, oklch(0.605 0.085 200 / 0.10), transparent 55%)',
         }}
-      >
-        {/* halo décoratif */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(900px 520px at 82% -10%, oklch(0.605 0.108 252 / 0.14), transparent 60%), radial-gradient(680px 460px at 2% 112%, oklch(0.605 0.085 200 / 0.10), transparent 55%)',
-          }}
-        />
+      />
 
-        <div className="relative z-10">
-          <div className="grid place-items-center rounded-2xl bg-white p-3 shadow-xl"
-            style={{ width: 132, height: 108 }}>
+      {/* Carte unique centrée : marque + formulaire */}
+      <Card className="relative z-10 w-full max-w-[440px] gap-0 p-8 shadow-xl sm:p-10">
+        {/* Bloc marque */}
+        <div className="flex flex-col items-center text-center">
+          <div
+            className="grid place-items-center rounded-2xl bg-white p-3 shadow-lg"
+            style={{ width: 120, height: 98 }}
+          >
             <img src={logoUrl} alt="Siconex" className="h-full w-full object-contain" />
           </div>
-        </div>
-
-        <div className="relative z-10 flex max-w-[460px] flex-col justify-center">
-          <div className="mb-4 text-xs font-extrabold uppercase tracking-[0.14em] text-primary">
+          <div className="mt-5 text-xs font-extrabold uppercase tracking-[0.14em] text-primary">
             Comptabilité SYSCOHADA
           </div>
-          <h1 className="mb-4 text-[42px] font-semibold leading-[1.08] tracking-tight text-foreground">
-            La compta de vos
-            <br />
-            magasins, au carré.
+          <h1 className="mt-2 text-[26px] font-semibold leading-[1.12] tracking-tight text-foreground">
+            La compta de vos magasins, au carré.
           </h1>
-          <p className="mb-7 text-[15.5px] font-semibold leading-relaxed text-muted-foreground">
-            Saisie en partie double, lettrage, balance, grand livre et états réglementaires —
-            pour chaque point de vente Siconex, en FCFA.
-          </p>
-          <ul className="flex flex-col gap-3.5">
-            {FEATURES.map(({ icon: Ic, label }) => (
-              <li key={label} className="flex items-center gap-3 text-[14.5px] font-bold text-foreground">
-                <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] border border-border bg-card text-primary shadow-sm">
-                  <Ic size={16} />
-                </span>
-                {label}
-              </li>
-            ))}
-          </ul>
         </div>
 
-        <div className="relative z-10 flex justify-between text-xs font-semibold text-muted-foreground">
-          <span>© 2026 Siconex Supermarché</span>
-          <span>v0 · Abidjan, CI</span>
-        </div>
-      </div>
+        {/* Fonctionnalités */}
+        <ul className="mt-6 flex flex-col gap-3">
+          {FEATURES.map(({ icon: Ic, label }) => (
+            <li key={label} className="flex items-center gap-3 text-[14px] font-bold text-foreground">
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] border border-border bg-card text-primary shadow-sm">
+                <Ic size={16} />
+              </span>
+              {label}
+            </li>
+          ))}
+        </ul>
 
-      {/* Formulaire (droite) */}
-      <div className="grid place-items-center bg-card p-10">
-        <form className="w-full max-w-[396px]" onSubmit={submit}>
+        {/* Séparateur */}
+        <div className="my-7 h-px w-full bg-border" />
+
+        {/* Formulaire */}
+        <form className="w-full" onSubmit={submit}>
           <div className="mb-6">
-            <h2 className="mb-1 text-3xl font-semibold tracking-tight">Connexion</h2>
+            <h2 className="mb-1 text-2xl font-semibold tracking-tight">Connexion</h2>
             <p className="text-[15px] font-semibold text-muted-foreground">
-              Accédez à votre espace comptable. 
+              Accédez à votre espace comptable.
             </p>
           </div>
 
@@ -197,7 +189,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps): React.JSX.Element {
             <b className="font-extrabold text-foreground">password</b>
           </div>
         </form>
-      </div>
+
+        {/* Footer */}
+        <div className="mt-7 flex justify-between text-xs font-semibold text-muted-foreground">
+          <span>© 2026 Siconex Supermarché</span>
+          <span>Abidjan, CI</span>
+        </div>
+      </Card>
     </div>
   );
 }
