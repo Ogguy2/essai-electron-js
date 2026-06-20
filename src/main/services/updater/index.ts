@@ -8,16 +8,13 @@ import { logError } from '../../logger';
  * Vérifie les releases GitHub au démarrage, télécharge en arrière-plan, puis
  * notifie le renderer quand une mise à jour est prête à installer.
  *
- * Par défaut : provider **github** (releases du dépôt public — détecte
- * automatiquement la dernière version, gère le renommage espaces→points des
- * assets, ne dépend d'aucun `.env`). Si `UPDATE_FEED_URL` est défini, on
- * bascule sur un flux `generic` (serveur HTTP/S3) — utile pour un hébergement
- * privé.
+ * Par défaut : provider **github**, configuré via le fichier `app-update.yml`
+ * généré dans les ressources du package (cf. hook `postPackage` de
+ * `forge.config.ts`). Détecte automatiquement la dernière release du dépôt
+ * public et gère le renommage espaces→points des assets — aucun `.env` requis.
+ * Si `UPDATE_FEED_URL` est défini, on surcharge avec un flux `generic`
+ * (serveur HTTP/S3) — utile pour un hébergement privé.
  */
-
-// Dépôt GitHub hébergeant les releases (assets + latest.yml).
-const GITHUB_OWNER = 'Ogguy2';
-const GITHUB_REPO = 'essai-electron-js';
 
 let targetWindow: BrowserWindow | null = null;
 
@@ -33,11 +30,11 @@ export function init(win: BrowserWindow): void {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
+  // Override optionnel pour un hébergement privé. Sinon, l'updater lit le
+  // provider github depuis `resources/app-update.yml` (généré au packaging).
   const url = process.env.UPDATE_FEED_URL;
   if (url) {
     autoUpdater.setFeedURL({ provider: 'generic', url });
-  } else {
-    autoUpdater.setFeedURL({ provider: 'github', owner: GITHUB_OWNER, repo: GITHUB_REPO });
   }
 
   autoUpdater.on('update-downloaded', (info) => {

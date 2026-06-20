@@ -193,7 +193,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps): React.JSX.Element {
         {/* Footer */}
         <div className="mt-7 flex justify-between text-xs font-semibold text-muted-foreground">
           <span>© 2026 Siconex Supermarché</span>
-          <span>Abidjan, CI</span>
+          <span>v{__APP_VERSION__} · Abidjan, CI</span>
         </div>
       </Card>
     </div>

@@ -1,3 +1,5 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -31,6 +33,25 @@ const config: ForgeConfig = {
     },
   },
   rebuildConfig: {},
+  hooks: {
+    // electron-updater exige un `resources/app-update.yml` dans le package pour
+    // savoir où chercher les mises à jour. Notre flux est hybride (Forge package
+    // puis electron-builder --prepackaged) : electron-builder n'injecte PAS ce
+    // fichier en mode prepackaged. On l'écrit donc nous-mêmes ici, à la fin du
+    // packaging Forge, pour chaque sortie. Provider GitHub (dépôt public).
+    postPackage: async (_forgeConfig, options) => {
+      const appUpdateYml = [
+        'provider: github',
+        'owner: Ogguy2',
+        'repo: essai-electron-js',
+        'updaterCacheDirName: sicocompte-updater',
+        '',
+      ].join('\n');
+      for (const outputPath of options.outputPaths) {
+        fs.writeFileSync(path.join(outputPath, 'resources', 'app-update.yml'), appUpdateYml);
+      }
+    },
+  },
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
