@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { IPC, type UpdateReadyPayload } from '../../../shared/ipc';
+import { IPC, type UpdateReadyPayload, type UpdateProgressPayload } from '../../../shared/ipc';
 import { logError } from '../../logger';
 
 /**
@@ -36,6 +36,19 @@ export function init(win: BrowserWindow): void {
   if (url) {
     autoUpdater.setFeedURL({ provider: 'generic', url });
   }
+
+  // Progression du téléchargement → barre de progression côté renderer.
+  autoUpdater.on('download-progress', (p) => {
+    const payload: UpdateProgressPayload = {
+      percent: p.percent,
+      transferred: p.transferred,
+      total: p.total,
+      bytesPerSecond: p.bytesPerSecond,
+    };
+    if (targetWindow && !targetWindow.isDestroyed()) {
+      targetWindow.webContents.send(IPC.updateProgress, payload);
+    }
+  });
 
   autoUpdater.on('update-downloaded', (info) => {
     const payload: UpdateReadyPayload = { version: info.version };

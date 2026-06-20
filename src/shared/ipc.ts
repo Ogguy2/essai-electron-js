@@ -34,6 +34,7 @@ export type {
   UserCreateInput,
   UserUpdateInput,
   UpdateReadyPayload,
+  UpdateProgressPayload,
   StatutEcriture,
   EcritureLigne,
   Ecriture,
@@ -56,6 +57,7 @@ import type { IpcResult } from '../types/ipc';
 import type {
   AuthUser,
   UpdateReadyPayload,
+  UpdateProgressPayload,
   Societe,
   SocieteInput,
   Magasin,
@@ -91,6 +93,8 @@ export const IPC = {
   updateInstall: 'update:install',
   /** main → renderer : une mise à jour est téléchargée et prête à installer. */
   updateReady: 'update:ready',
+  /** main → renderer : progression du téléchargement de la mise à jour. */
+  updateProgress: 'update:progress',
   societesList: 'societes:list',
   societesCreate: 'societes:create',
   societesUpdate: 'societes:update',
@@ -156,6 +160,11 @@ export interface Api {
      * désabonnement à appeler au démontage.
      */
     onReady(callback: (payload: UpdateReadyPayload) => void): () => void;
+    /**
+     * S'abonne à la progression du téléchargement. Renvoie une fonction de
+     * désabonnement à appeler au démontage.
+     */
+    onProgress(callback: (payload: UpdateProgressPayload) => void): () => void;
   };
   societes: {
     list(): Promise<IpcResult<Societe[]>>;

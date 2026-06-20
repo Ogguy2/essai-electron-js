@@ -83,6 +83,18 @@ export interface UpdateReadyPayload {
   version: string;
 }
 
+/** Progression du téléchargement d'une mise à jour (main → renderer). */
+export interface UpdateProgressPayload {
+  /** Progression, 0 → 100. */
+  percent: number;
+  /** Octets déjà téléchargés. */
+  transferred: number;
+  /** Taille totale en octets. */
+  total: number;
+  /** Débit instantané en octets/seconde. */
+  bytesPerSecond: number;
+}
+
 export interface User {
   id: number;
   username: string;
